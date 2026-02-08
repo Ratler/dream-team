@@ -34,8 +34,8 @@ Use today's date. Example: `specs/2026-02-07-user-auth-api.md`
 6. Set frontmatter `playwright: true` if the brainstorming decided to use Playwright MCP, otherwise `playwright: false`.
 7. Design for MAXIMUM INDEPENDENCE between teammates — avoid assigning same-file edits to different agents.
 8. Set `plan_approval: true` for high-risk or architectural tasks.
-9. Size tasks at 5-6 per teammate for optimal productivity.
-10. Include Team Members, Team Configuration, and Review Policy sections.
+9. Size tasks at 5-6 per agent role for optimal productivity.
+10. Include Team Configuration and Review Policy sections.
 11. Save to `specs/YYYY-MM-DD-<descriptive-kebab-case>.md` using today's date.
 
 ## Task Rules
@@ -45,8 +45,7 @@ Use today's date. Example: `specs/2026-02-07-user-auth-api.md`
 - Set `Plan Approval: true` for high-risk tasks (architectural decisions, schema changes, security-critical code)
 - Set `Depends On` conservatively — only add real dependencies, let parallelism happen naturally
 - Every builder task must include a **Tests** field listing the test file paths and test cases it must produce. Use "N/A" only for tasks with zero testable code (research, docs, config-only).
-- Each teammate should own distinct files to avoid conflicts
-- Size tasks so each teammate has 5-6 tasks for sustained productivity
+- Avoid assigning same-file edits to tasks that can run in parallel
 - Research and architecture tasks should complete before build tasks depend on them
 - **After every builder task that writes code, add a review task** assigned to the reviewer agent. The review task depends on the builder task it reviews.
 - The second-to-last task MUST be a final code review (reviewer) that depends on all builder tasks
@@ -56,6 +55,8 @@ Use today's date. Example: `specs/2026-02-07-user-auth-api.md`
 
 - **Display Mode**: Use `split-pane` if the user has tmux/iTerm2, otherwise `in-process`
 - **Delegate Mode**: Set `true` (recommended) so the lead only coordinates and never implements directly
+- **Max Active Agents**: Default 6. This caps concurrent agent instances. The orchestrator asks the user to confirm before starting. Can be increased for large projects with many independent workstreams.
+- **Rotation After**: Default 3. Each agent instance handles at most this many tasks before being retired and replaced with a fresh instance. Prevents context window exhaustion.
 
 ## Review Policy Defaults
 
@@ -83,8 +84,7 @@ Spec written (team mode)
 File: specs/YYYY-MM-DD-<name>.md
 Tasks: <number of tasks>
 Complexity: <simple | medium | complex>
-Team: <list of agent names and roles>
-Config: display=<mode>, delegate=<true|false>
+Config: display=<mode>, delegate=<true|false>, max_agents=<N>, rotation=<N>
 
 NOTE: Agent teams require CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1 in settings.
 

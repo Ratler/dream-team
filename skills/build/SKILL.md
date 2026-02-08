@@ -155,29 +155,84 @@ If Playwright tools are not available in your tool list, skip this step and note
 
 ## Mode: Team
 
-You create a full agent team with separate Claude instances.
+You are the orchestrator of a dynamic agent team. You NEVER write code directly — you manage agent slots, schedule tasks, and handle git.
+
+**IMPORTANT**: Agent teams require `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1` in settings. If this is not enabled, inform the user and suggest using `/dream-team:spec-delegated` as an alternative.
+
+### Pre-flight
 
 1. Create the feature branch (see Git Workflow).
 2. Read agent definitions from AVAILABLE_AGENTS.
-3. Read the `## Team Configuration` section for display mode and delegate mode settings.
-4. Instruct Claude to create an agent team:
-   - Name the team based on the spec topic.
-   - Spawn one teammate per agent listed in `## Team Members`. When spawning, specify the model for each teammate matching their agent definition: builder=opus, researcher=sonnet, reviewer=sonnet, tester=sonnet, validator=haiku, architect=opus, debugger=opus.
-   - Give each teammate their assigned tasks as the spawn prompt — include full task text, file paths, and acceptance criteria.
-   - If `Delegate Mode: true`, enable delegate mode (Shift+Tab) so you only coordinate.
-   - **NOTE**: If the agent teams feature does not support per-teammate model selection, all teammates will use the session's default model. This is a known limitation of the experimental feature.
-5. Create all tasks via TaskCreate. Set dependencies per spec.
-6. Teammates self-claim unblocked tasks from the shared task list.
-7. If `Plan Approval: true` on a task, the teammate must submit a plan before implementing. Review and approve or reject with feedback.
-8. Monitor progress. If a teammate stalls or reports issues:
-   - Message them directly with guidance.
-   - If unresolvable, spawn a replacement teammate.
-9. **MANDATORY: When any builder teammate finishes a task that writes code, message the reviewer teammate to review the work.** Do NOT let the builder move to the next task until the reviewer approves. Handle fix loops via teammate messaging.
-10. **After the reviewer approves a task, commit the changes yourself** (see Git Workflow). Teammates do NOT commit — only the lead handles git.
-11. After all tasks: message the validator teammate to run final verification.
-12. Clean up the team when done.
+3. Read `## Team Configuration` for `Display Mode`, `Delegate Mode`, `Max Active Agents` (default 6), and `Rotation After` (default 3).
+4. Create all tasks via TaskCreate. Set dependencies per spec.
+5. Ask the user: "This build has X tasks across Y distinct roles. Max concurrent agents is set to N. OK to proceed, or would you like to adjust?" Wait for confirmation before spawning any agents.
+6. If `Delegate Mode: true`, enable delegate mode (Shift+Tab) so you only coordinate.
 
-**IMPORTANT**: Agent teams require `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1` in settings. If this is not enabled, inform the user and suggest using `/dream-team:spec-delegated` as an alternative.
+### Scheduling Priority
+
+7. **CRITICAL RULE — REVIEWS FIRST: ALWAYS schedule pending review tasks before pending build tasks.** When a slot is free and both a review task and a build task are waiting, you MUST assign the review task first. Reviews unblock commits. Starving reviews deadlocks the entire pipeline. This is not a suggestion — it is a hard scheduling constraint.
+
+### Dynamic Slot Management
+
+8. **All agent slots are equal.** There are no reserved slots. You fill slots dynamically based on what unblocked tasks need doing right now.
+
+9. **Scheduling loop** — repeat until all tasks are complete:
+    a. List all unblocked tasks (no pending dependencies).
+    b. Sort them: review tasks first, then all other tasks.
+    c. For each unblocked task, check if an idle agent (finished its previous task) with the same `Assigned To` label exists and is under the rotation limit:
+       - **YES → reuse**: Send the task to that idle agent via `SendMessage`. Include full task text, file paths, and acceptance criteria.
+       - **NO idle agent for that label → spawn**: If a slot is free (active agents < `Max Active Agents`), spawn a new agent for this task — even if other busy agents share the same label. Multiple instances of the same label running in parallel is expected when multiple tasks are unblocked. When spawning, specify the model matching the agent type: builder=opus, researcher=sonnet, reviewer=sonnet, tester=sonnet, validator=haiku, architect=opus, debugger=opus. Include full task text, file paths, and acceptance criteria in the spawn prompt. **NOTE**: If the agent teams feature does not support per-agent model selection, all agents will use the session's default model.
+       - **NO free slot → wait**: Monitor active agents. When one completes and frees a slot, return to step (a).
+    d. When an agent completes a task and no more unblocked tasks need its `Assigned To` label, the slot is freed. If more tasks for that label are pending but blocked, the slot is also freed (the agent will be respawned when those tasks unblock).
+    e. **Never exceed `Max Active Agents` concurrent agents.** If you find yourself about to spawn an agent that would exceed the cap, wait for a slot to free up first.
+
+### Rotation Rules
+
+10. **Each agent instance handles at most `Rotation After` tasks** (default 3). Track the task count per agent instance.
+    - After an agent completes its Nth task (where N = `Rotation After`), **retire it** — do not send it further messages.
+    - If that `Assigned To` label has remaining tasks, spawn a fresh instance with a handoff summary:
+      ```
+      You are taking over the [Assigned To] role.
+      Previous instance completed tasks: [task-id-1, task-id-2, task-id-3]
+      Commits: [sha1 "message1", sha2 "message2", sha3 "message3"]
+      Your remaining tasks: [task-id-4, task-id-5]
+      ```
+    - The rotation count resets for each new instance.
+
+### Anti-pattern and Correct Pattern
+
+**WRONG — spawning a new instance when an idle one exists:**
+Backend Builder finishes task 1 and goes idle. Task 2 (also assigned to Backend Builder) becomes unblocked. You spawn a SECOND "Backend Builder" instance instead of sending task 2 to the idle one. Now you have two agents for no reason.
+
+**RIGHT — reuse idle instances, parallelize when multiple tasks are unblocked:**
+- Backend Builder finishes task 1. Task 2 is unblocked for the same label. Send task 2 to the SAME agent via `SendMessage` (it's idle and under the rotation limit).
+- But: if tasks 2, 3, and 4 are ALL unblocked simultaneously and 3 slots are free, spawn 3 Backend Builder instances in parallel — one per task. This is correct because each instance handles one concurrent task.
+- After any instance hits the rotation limit (3 tasks), retire it and spawn fresh if more tasks remain.
+
+**Key rule:** One agent instance = one task at a time. Reuse idle instances before spawning new ones. But DO spawn multiple instances of the same label when multiple tasks can run in parallel.
+
+### Review and Commit Workflow
+
+11. **MANDATORY: After every builder agent finishes a task that writes code, schedule a review task.** The builder does NOT move to its next task until the reviewer approves. Handle fix loops via messaging:
+    - If reviewer reports Critical or Important issues: send feedback to the builder agent via `SendMessage` (or resume it). After fixes, schedule another review. Repeat up to `Max Retries` times.
+    - If max retries exceeded: stop and escalate to the user.
+12. **After the reviewer approves a task, commit the changes yourself** (see Git Workflow). Agents do NOT touch git — only the orchestrator commits.
+13. Research, architecture, and validation tasks do NOT need review — commit them directly after completion.
+
+### Plan Approval
+
+14. If `Plan Approval: true` on a task, the agent must submit a plan before implementing. Review and approve or reject with feedback before the agent proceeds.
+
+### Monitoring
+
+15. Monitor agent progress. If an agent stalls or reports an unresolvable issue:
+    - Message it directly with guidance.
+    - If still unresolvable, retire the agent and spawn a fresh instance for the same `Assigned To` label (this counts as a rotation — include the handoff summary).
+
+### Completion
+
+16. After all tasks are complete: spawn a validator agent in a free slot for final verification.
+17. Clean up — no further messages to any agents.
 
 ## Shared: After All Tasks Complete
 

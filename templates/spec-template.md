@@ -43,7 +43,7 @@ created: <YYYY-MM-DDTHH:MM:SS ISO date>
 <describe integration, testing, and final touches>
 </if>
 
-<if mode is delegated or team>
+<if mode is delegated>
 ## Team Members
 <list agents used in this plan with the following format for each>
 
@@ -56,6 +56,8 @@ created: <YYYY-MM-DDTHH:MM:SS ISO date>
 ## Team Configuration
 - **Display Mode**: <in-process | split-pane>
 - **Delegate Mode**: <true if lead should be coordination-only, false otherwise>
+- **Max Active Agents**: <max concurrent agents, default 6>
+- **Rotation After**: <tasks per agent instance before rotation, default 3>
 </if>
 
 <if mode is delegated or team>
@@ -76,7 +78,7 @@ created: <YYYY-MM-DDTHH:MM:SS ISO date>
 - **Description**: <what to do, with specific actions as bullet points>
 - **Tests**: <what tests must be written for this task — specify test file paths, test cases, and expected behaviors. Use "N/A" only for tasks that produce zero testable code (research, docs, config-only).>
 <if mode is delegated or team>
-- **Assigned To**: <agent display name from Team Members>
+- **Assigned To**: <agent display name — for delegated mode, must match a Team Members entry; for team mode, a descriptive label used by the orchestrator to group tasks>
 - **Agent Type**: <builder | researcher | reviewer | validator | architect | tester>
 </if>
 <if mode is delegated>

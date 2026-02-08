@@ -110,7 +110,6 @@ test('blocks team spec missing Team Configuration', () => {
     '## Objective', 'Obj',
     '## Relevant Files', 'Files',
     '## Step by Step Tasks', 'Tasks',
-    '## Team Members', 'Members',
     '## Review Policy', 'Policy',
     '## Documentation Requirements', 'Docs',
     '## Acceptance Criteria', 'Criteria',
@@ -122,14 +121,14 @@ test('blocks team spec missing Team Configuration', () => {
 });
 
 cleanup();
-test('continues for valid team spec with all sections', () => {
+test('continues for valid team spec with all sections (including optional Team Members)', () => {
   writeSpec('test.md', [
     '---', 'mode: team', '---',
     '## Task Description', 'A task',
     '## Objective', 'Obj',
     '## Relevant Files', 'Files',
     '## Step by Step Tasks', 'Tasks',
-    '## Team Members', 'Members',
+    '## Team Members', 'Optional but allowed',
     '## Team Configuration', 'Config',
     '## Review Policy', 'Policy',
     '## Documentation Requirements', 'Docs',
@@ -138,6 +137,24 @@ test('continues for valid team spec with all sections', () => {
   ].join('\n'));
   const result = runHook(testDir);
   assert(result.result === 'continue', `expected "continue", got "${result.result}": ${result.reason || ''}`);
+});
+
+cleanup();
+test('continues for team spec without Team Members', () => {
+  writeSpec('test.md', [
+    '---', 'mode: team', '---',
+    '## Task Description', 'A task',
+    '## Objective', 'Obj',
+    '## Relevant Files', 'Files',
+    '## Step by Step Tasks', 'Tasks',
+    '## Team Configuration', 'Config',
+    '## Review Policy', 'Policy',
+    '## Documentation Requirements', 'Docs',
+    '## Acceptance Criteria', 'Criteria',
+    '## Validation Commands', 'Commands',
+  ].join('\n'));
+  const result = runHook(testDir);
+  assert(result.result === 'continue', `expected "continue" (Team Members not required for team mode), got "${result.result}": ${result.reason || ''}`);
 });
 
 cleanup();

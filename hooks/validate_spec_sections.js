@@ -28,8 +28,10 @@ const DELEGATED_SECTIONS = [
   '## Review Policy',
 ];
 
+// Team mode does NOT require Team Members — the orchestrator derives agents
+// dynamically from per-task Assigned To and Agent Type fields.
+// Delegated mode still requires Team Members for its explicit dispatch list.
 const TEAM_SECTIONS = [
-  '## Team Members',
   '## Team Configuration',
   '## Review Policy',
 ];
