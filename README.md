@@ -16,6 +16,18 @@ spec and executes it using the appropriate strategy. It ships with seven special
 - **Team** -- Separate Claude instances working in parallel via a shared task list. Highest cost, best for large
   projects with independent streams. Requires `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS`.
 
+## Prerequisites
+
+For all features to work — especially the **Team** execution tier — you need to enable experimental agent teams in Claude Code:
+
+```
+export CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1
+```
+
+See the [Agent Teams documentation](https://code.claude.com/docs/en/agent-teams) for details.
+
+A terminal multiplexer like **tmux** or **iTerm2** is recommended, as agent teams spawn multiple Claude instances that benefit from separate panes/windows for monitoring.
+
 ## Installation
 
 Register the repository as a local marketplace, then install:
