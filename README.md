@@ -2,6 +2,22 @@
 
 A Claude Code plugin for planning and executing development projects across three execution tiers.
 
+## At a Glance
+
+| Area                | Dream Team                                                |
+|---------------------|-----------------------------------------------------------|
+| **Philosophy**      | Turn Claude into a project lead                           |
+| **Skills**          | 6 pipeline-connected skills (plan, spec x3, build, debug) |
+| **Agents**          | 7 named roles with per-agent model and tool policies      |
+| **Execution modes** | Sequential, Delegated, Team                               |
+| **Planning**        | Formal specs with YAML frontmatter                        |
+| **Task tracking**   | TaskCreate/TaskUpdate with dependency graph               |
+| **Git workflow**    | Built into execution (branch, commit, review gates)       |
+| **Code review**     | Configurable review policy with retry loops               |
+| **Team support**    | Parallel Claude instances via experimental agent teams    |
+| **Playwright**      | First-class integration (opt-in per spec)                 |
+| **Validation**      | Hook-enforced (preflight checks, can't skip)              |
+
 ## Overview
 
 Dream Team provides structured planning skills that generate spec files, and a universal build skill that reads the
@@ -26,7 +42,20 @@ export CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1
 
 See the [Agent Teams documentation](https://code.claude.com/docs/en/agent-teams) for details.
 
-A terminal multiplexer like **tmux** or **iTerm2** is recommended, as agent teams spawn multiple Claude instances that benefit from separate panes/windows for monitoring.
+A terminal multiplexer like **tmux** or **iTerm2** is recommended, as agent teams spawn multiple Claude instances that benefit
+from separate panes/windows for monitoring.
+
+### Optional: Playwright MCP
+
+If your specs set `playwright: true`, builder and tester agents will use Playwright to verify UI changes visually
+(navigate pages, take screenshots, interact with elements, check for console errors). Install the 
+[Playwright MCP server](https://github.com/anthropics/mcp-playwright) to enable this:
+
+```
+claude mcp add playwright npx @playwright/mcp@latest
+```
+
+Without it, agents will skip visual verification and note it in their reports.
 
 ## Installation
 
@@ -124,7 +153,7 @@ Four JavaScript hooks run at key points in the workflow:
 
 | Agent      | Model  | Role                                                      |
 |------------|--------|-----------------------------------------------------------|
-| builder    | sonnet | Writes code, runs tests, commits                          |
+| builder    | opus   | Writes code, runs tests, commits                          |
 | researcher | sonnet | Explores codebases and gathers context (read-only)        |
 | architect  | opus   | Designs systems and makes technical decisions (read-only) |
 | reviewer   | sonnet | Reviews code for correctness and quality (read-only)      |
