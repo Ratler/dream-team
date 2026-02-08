@@ -1,0 +1,13 @@
+{
+  "name": "dream-team",
+  "description": "Structured project planning and execution through brainstorm, spec, and build phases across three execution tiers: sequential, delegated sub-agents, and full agent teams",
+  "version": "0.1.0",
+  "author": {
+    "name": "Stefan Wold",
+    "email": "ratler@stderr.eu"
+  },
+  "homepage": "https://github.com/Ratler/dream-team",
+  "repository": "https://github.com/Ratler/dream-team", 
+  "license": "MIT",
+  "keywords": ["skill", "planning", "orchestration", "agents", "teams", "specs", "workflow"]
+}

@@ -1,0 +1,23 @@
+{
+  "name": "dream-team-dev",
+  "metadata": {
+    "description": "Dev marketplace for Dream Team plugin"
+  },
+  "owner": {
+    "name": "Stefan Wold",
+    "email": "ratler@stderr.eu"
+  },
+  "plugins": [
+    {
+      "name": "dream-team",
+      "description": "Structured project planning and execution through brainstorm, spec, and build phases across three execution tiers: sequential, delegated sub-agents, and full agent teams",
+      "version": "0.1.0",
+      "source": "./",
+      "license": "MIT",
+      "author": {
+        "name": "Stefan Wold",
+        "email": "ratler@stderr.eu"
+      }
+    }
+  ]
+}
