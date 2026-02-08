@@ -1,40 +1,15 @@
 # Dream Team
 
-A Claude Code plugin for planning and executing development projects across three execution tiers.
-
-## At a Glance
-
-| Area                | Dream Team                                                |
-|---------------------|-----------------------------------------------------------|
-| **Philosophy**      | Turn Claude into a project lead                           |
-| **Skills**          | 6 pipeline-connected skills (plan, spec x3, build, debug) |
-| **Agents**          | 7 named roles with per-agent model and tool policies      |
-| **Execution modes** | Sequential, Delegated, Team                               |
-| **Planning**        | Formal specs with YAML frontmatter                        |
-| **Task tracking**   | TaskCreate/TaskUpdate with dependency graph               |
-| **Git workflow**    | Built into execution (branch, commit, review gates)       |
-| **Code review**     | Configurable review policy with retry loops               |
-| **Team support**    | Parallel Claude instances via experimental agent teams    |
-| **Playwright**      | First-class integration (opt-in per spec)                 |
-| **Validation**      | Hook-enforced (preflight checks, can't skip)              |
+A Claude Code plugin for planning and executing development projects across three execution modes.
 
 ## Overview
 
 Dream Team provides structured planning skills that generate spec files, and a universal build skill that reads the
 spec and executes it using the appropriate strategy. It ships with seven specialized agents for common development roles.
 
-## Execution Tiers
-
-- **Sequential** -- Single session, no sub-agents, tasks run one at a time. Cheapest option, best for small or tightly
-  coupled work.
-- **Delegated** -- Single session with an orchestrator dispatching specialized sub-agents (builder, researcher, 
-  reviewer, etc.). Medium cost, best for work with clear role boundaries.
-- **Team** -- Separate Claude instances working in parallel via a shared task list. Highest cost, best for large
-  projects with independent streams. Requires `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS`.
-
 ## Prerequisites
 
-For all features to work — especially the **Team** execution tier — you need to enable experimental agent teams in Claude Code:
+For all features to work — especially the **Team** execution mode — you need to enable experimental agent teams in Claude Code:
 
 ```
 export CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1
@@ -48,7 +23,7 @@ from separate panes/windows for monitoring.
 ### Optional: Playwright MCP
 
 If your specs set `playwright: true`, builder and tester agents will use Playwright to verify UI changes visually
-(navigate pages, take screenshots, interact with elements, check for console errors). Install the 
+(navigate pages, take screenshots, interact with elements, check for console errors). Install the
 [Playwright MCP server](https://github.com/anthropics/mcp-playwright) to enable this:
 
 ```
@@ -66,6 +41,43 @@ claude plugin marketplace add Ratler/dream-team-marketplace
 claude plugin install dream-team@dream-team-marketplace
 ```
 
+## Usage
+
+1. Brainstorm your idea:
+
+   ```
+   /dream-team:plan Build a REST API for user management
+   ```
+
+2. Write the spec (after brainstorming completes):
+
+   ```
+   /dream-team:spec-delegated
+   ```
+
+3. Execute:
+
+   ```
+   /dream-team:build specs/2026-02-08-user-management.md
+   ```
+
+## Features At a Glance
+
+| Area                | Dream Team                                                |
+|---------------------|-----------------------------------------------------------|
+| **Philosophy**      | Turn Claude into a project lead                           |
+| **Skills**          | 6 pipeline-connected skills (plan, spec x3, build, debug) |
+| **Agents**          | 7 named roles with per-agent model and tool policies      |
+| **Execution modes** | Sequential, Delegated, Team                               |
+| **Planning**        | Formal specs with YAML frontmatter                        |
+| **Task tracking**   | TaskCreate/TaskUpdate with dependency graph               |
+| **Git workflow**    | Built into execution (branch, commit, review gates)       |
+| **Code review**     | Configurable review policy with retry loops               |
+| **Team support**    | Parallel Claude instances via experimental agent teams    |
+| **Playwright**      | First-class integration (opt-in per spec)                 |
+| **Validation**      | Hook-enforced (preflight checks, can't skip)              |
+
+
 ## How It Works
 
 Dream Team separates the workflow into three distinct phases: brainstorm, spec, build. Each phase has its own command
@@ -75,16 +87,17 @@ and produces a clear handoff to the next.
 
 `/dream-team:plan` starts an interactive conversation. It explores the codebase, asks clarifying questions one at
 a time, proposes 2-3 approaches with trade-offs, and walks through the task breakdown section by section. No files are
-created; the output is a shared understanding between you and Claude. At the end, it recommends which execution tier
+created; the output is a shared understanding between you and Claude. At the end, it recommends which execution mode
 fits best.
 
 ### 2. Spec (write)
 
-Once brainstorming is complete, run the spec command for your chosen tier:
+Once brainstorming is complete, run the spec command for your chosen execution mode. The command you pick determines
+how the build phase will run:
 
-- `/dream-team:spec-sequential`
-- `/dream-team:spec-delegated`
-- `/dream-team:spec-team`
+- `/dream-team:spec-sequential` — produces a spec for single-session execution
+- `/dream-team:spec-delegated` — produces a spec with agent assignments for orchestrated execution
+- `/dream-team:spec-team` — produces a spec with team configuration for parallel Claude instances
 
 The spec skill picks up the conversation context, reads the shared template (`templates/spec-template.md`), and writes
 a structured spec file to `specs/`. The spec includes YAML frontmatter declaring the execution mode, along with sections
@@ -93,7 +106,7 @@ dependencies so blocked work waits for its prerequisites automatically.
 
 ### 3. Build (execute)
 
-`/dream-team:build specs/<filename>.md` reads the spec's frontmatter and runs the matching execution strategy:
+`/dream-team:build specs/<filename>.md` reads the spec's `mode` frontmatter and runs the matching execution strategy:
 
 - **Sequential** -- Iterates through tasks in dependency order within a single session. No sub-agents are spawned. The
   main session handles everything directly, making it the simplest and cheapest path.
@@ -129,26 +142,6 @@ Four JavaScript hooks run at key points in the workflow:
   Claude Code never invokes them. The SessionStart hook in `hooks.json` works fine. The Stop hooks will activate once
   the upstream bug is fixed, no changes needed on our side.
 
-## Usage
-
-1. Brainstorm your idea:
-
-   ```
-   /dream-team:plan Build a REST API for user management
-   ```
-
-2. Write the spec (after brainstorming completes):
-
-   ```
-   /dream-team:spec-sequential
-   ```
-
-3. Execute:
-
-   ```
-   /dream-team:build specs/2026-02-08-user-management.md
-   ```
-
 ## Agents
 
 | Agent      | Model  | Role                                                      |
@@ -168,7 +161,7 @@ Four JavaScript hooks run at key points in the workflow:
 make test
 ```
 
-or 
+or
 
 ```
 node tests/test_session_start.js
