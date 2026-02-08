@@ -24,7 +24,7 @@ from separate panes/windows for monitoring.
 
 If your specs set `playwright: true`, builder and tester agents will use Playwright to verify UI changes visually
 (navigate pages, take screenshots, interact with elements, check for console errors). Install the
-[Playwright MCP server](https://github.com/anthropics/mcp-playwright) to enable this:
+[Playwright MCP server](https://github.com/microsoft/playwright-mcp) to enable this:
 
 ```
 claude mcp add playwright npx @playwright/mcp@latest
