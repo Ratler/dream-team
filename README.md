@@ -16,6 +16,15 @@ spec and executes it using the appropriate strategy. It ships with seven special
 - **Team** -- Separate Claude instances working in parallel via a shared task list. Highest cost, best for large
   projects with independent streams. Requires `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS`.
 
+## Installation
+
+Register the repository as a local marketplace, then install:
+
+```
+claude plugin marketplace add Ratler/dream-team-marketplace
+claude plugin install dream-team@dream-team-marketplace
+```
+
 ## How It Works
 
 Dream Team separates the workflow into three distinct phases: brainstorm, spec, build. Each phase has its own command
@@ -111,14 +120,6 @@ Four JavaScript hooks run at key points in the workflow:
 | validator  | haiku  | Fast validation checks (read-only)                        |
 | debugger   | opus   | Systematic debugging: reproduce, investigate, fix         |
 
-## Installation
-
-Register the repository as a local marketplace, then install:
-
-```
-claude plugin marketplace add Ratler/dream-team-marketplace
-claude plugin install dream-team@dream-team-marketplace
-```
 
 ## Tests
 
