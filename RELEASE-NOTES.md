@@ -1,5 +1,17 @@
 # Release Notes
 
+## 0.2.0
+
+### Team Mode: Dynamic Slot Scheduling
+
+Replaced the rigid team member roster with dynamic slot-based scheduling. The orchestrator now fills up to N concurrent
+agent slots (default 6) based on unblocked task demand, rotates instances after 3 tasks to prevent context exhaustion,
+and always prioritizes reviews over builds to prevent pipeline deadlocks.
+
+The `## Team Members` section is no longer required in team mode specs (still used in delegated mode).
+
+---
+
 ## 0.1.0 — Initial Release
 
 First public release of Dream Team, a Claude Code plugin for structured planning and execution of development projects.
