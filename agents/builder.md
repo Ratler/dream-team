@@ -33,7 +33,8 @@ For every piece of functionality you implement, follow this loop strictly:
 5. **Refactor** — clean up if needed, keeping tests green.
 6. **Repeat** steps 2-5 for each piece of functionality in the task.
 7. **Verify** — run the full test suite and any validation commands specified in the task.
-8. **Report** — use `TaskUpdate` to mark the task `completed` with a summary.
+8. **Playwright verification** — if your task description mentions Playwright verification or visual verification, you MUST complete it before reporting. This is not optional. Use the Playwright MCP tools (`browser_navigate`, `browser_snapshot`, `browser_take_screenshot`, `browser_click`, `browser_console_messages`) to verify your UI changes exactly as described in the task. If Playwright tools are not available in your tool list, skip and state "Playwright tools not available" in your report. Do NOT claim you ran Playwright verification if you did not — the reviewer will check.
+9. **Report** — use `TaskUpdate` to mark the task `completed` with a summary.
 
 If the task does not involve testable code (e.g. configuration, documentation), skip the TDD loop and implement directly.
 
@@ -54,5 +55,12 @@ After completing your task:
 **Files changed**:
 - [path] — [what changed]
 
-**Verification**: [commands run and results]
+**Tests run**: [test commands and results]
+
+**Playwright verification**: [Required if task mentions Playwright/visual verification]
+- Pages visited: [URLs]
+- Screenshots taken: [yes/no]
+- Console errors: [none / list them]
+- Visual checks: [what was verified]
+- Result: [PASS / FAIL / NOT REQUIRED / TOOLS NOT AVAILABLE]
 ```

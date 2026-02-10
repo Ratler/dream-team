@@ -91,6 +91,14 @@ created: <YYYY-MM-DDTHH:MM:SS ISO date>
 
 <continue with additional numbered tasks — after every builder task that writes code, add a review task>
 
+<if mode is delegated or team>
+<guidance for tester tasks — include a tester task when ANY of these apply:
+- Multiple builder tasks produce components that must integrate (add integration tests after both builders complete)
+- The project handles user input, authentication, or has a security-sensitive API surface (add adversarial/security tests)
+- The spec has acceptance criteria that span the full stack end-to-end (add E2E tests after all build tasks)
+- Do NOT add tester tasks just to duplicate the builder's TDD unit tests — the builder already writes those>
+</if>
+
 ### N-1. Code Review
 - **Task ID**: review-all
 - **Depends On**: <all builder task IDs>

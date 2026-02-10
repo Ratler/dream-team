@@ -46,6 +46,7 @@ Use today's date. Example: `specs/2026-02-07-user-auth-api.md`
 - Every builder task must include a **Tests** field listing the test file paths and test cases it must produce. Use "N/A" only for tasks with zero testable code (research, docs, config-only).
 - Research tasks go first, then architecture, then building, then testing, then validation
 - **After every builder task that writes code, add a review task** assigned to the reviewer agent. The review task depends on the builder task it reviews.
+- **Add tester tasks when appropriate** — do NOT add them by default for every builder task (builders already do TDD). Add a tester task when: (a) multiple builder tasks produce components that must integrate — the tester writes integration tests after both complete; (b) the project handles user input, auth, or has security-sensitive APIs — the tester writes adversarial/boundary tests; (c) acceptance criteria span the full stack — the tester writes E2E tests after all builders finish. Tester tasks depend on the builder task(s) they test and should run before or alongside the final review.
 - The second-to-last task MUST be a final code review (reviewer) that depends on all builder tasks
 - The final task should always be assigned to the validator agent, depending on the final review
 
