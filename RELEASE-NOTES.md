@@ -1,5 +1,44 @@
 # Release Notes
 
+## 0.3.0
+
+### Builder: Mandatory Playwright Verification
+
+Playwright verification is now step 8 in the builder agent's workflow, with a dedicated section in the report format
+(pages visited, screenshots, console errors, visual checks). When a task mentions Playwright or visual verification,
+the builder must complete it before reporting.
+
+Before this change, Playwright instructions only existed in the build skill as a text block the orchestrator would paste
+into dispatch prompts. In practice builders would skip it or claim they ran it when they hadn't. The reviewer would catch
+it, push it back, and the builder would do it on retry, wasting a full review cycle. Baking the requirement into the
+agent definition itself fixes this.
+
+### Tester Agent: Adversarial/Integration Testing
+
+Rewrote the tester agent to stop overlapping with builder TDD. Builders already write unit tests as part of their
+workflow. The tester now focuses on what builders can't do:
+
+- Integration tests across components from different builders
+- Adversarial edge cases (malformed input, boundary values, race conditions, oversized payloads)
+- Security/trust boundary testing (injection, auth bypasses, API surface validation)
+- E2E suites that exercise the full stack
+
+The workflow starts from the spec, not the code. The tester reads existing builder tests first to find gaps, then
+writes targeted tests for uncovered areas. Failing tests are flagged as potential bugs.
+
+### Spec-Writing: Tester Assignment Guidance
+
+The delegated and team spec skills now have rules for when to assign tester tasks. They're not added by default since
+builders handle unit tests. Tester tasks get added when:
+
+- Multiple builders produce components that need integration testing
+- The project has user input, auth, or security-sensitive APIs
+- Acceptance criteria span the full stack
+
+The spec template has matching guidance so spec authors see the rules while writing.
+
+---
+
 ## 0.2.0
 
 ### Team Mode: Dynamic Slot Scheduling
