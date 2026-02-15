@@ -1,5 +1,40 @@
 # Release Notes
 
+## 0.4.0
+
+### Proactive Security Reviewer Agent
+
+New `security-reviewer` agent (opus, read-only) that runs automatically on every build. Works through a structured
+6-category checklist: input validation, injection vectors, authentication & authorization, secrets & credentials,
+data exposure, and dangerous code patterns. Reports findings as Critical/Important/Minor with file:line references
+and concrete fix suggestions.
+
+Previously, security coverage was reactive -- the reviewer would catch vulnerabilities incidentally, and the tester
+only ran security tests when the spec author thought to include them. Now every build gets a dedicated security pass
+regardless of what the spec says. The orchestrator auto-injects the step in all three execution modes.
+
+Critical findings trigger the same fix loop as code review Critical issues -- the builder fixes, the security
+reviewer re-checks, up to the configured retry limit.
+
+### Team Mode: Prevent Silent Fallback to Delegated
+
+Fixed a bug where team-mode specs could silently execute in delegated mode. Three contributing factors:
+
+- The `Delegate Mode` field name in Team Configuration was ambiguous -- renamed to `Coordinate Only` to eliminate
+  confusion with the delegated execution mode.
+- The `preflight_team_check.js` hook existed but was never registered in `hooks.json`. It now fires as a PreToolUse
+  hook on every Skill tool call, blocking team-mode builds when the agent teams env var is not set.
+- The env-var check in the build skill was a passive note that Claude would skip. It is now structural step 1 of the
+  team pre-flight: "STOP if agent teams are not enabled. Do NOT fall back to delegated mode."
+
+### Session Startup Message
+
+The SessionStart hook now displays a visible startup message with the plugin version (e.g., "Dream Team v0.4.0
+loaded -- use /dream-team:plan to start"). The hook runs synchronously so the message appears before the session
+begins.
+
+---
+
 ## 0.3.0
 
 ### Builder: Mandatory Playwright Verification
