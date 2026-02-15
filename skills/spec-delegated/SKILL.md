@@ -30,12 +30,14 @@ Use today's date. Example: `specs/2026-02-07-user-auth-api.md`
 4. Write the spec, filling in all sections from the brainstorming context.
 5. Set frontmatter `mode: delegated`.
 6. Set frontmatter `playwright: true` if the brainstorming decided to use Playwright MCP, otherwise `playwright: false`.
-7. Assign each task to a specific agent by name and type.
-8. Mark tasks as `background: true` when they can safely run in parallel (no file conflicts, no dependencies).
-9. Include Team Members and Review Policy sections.
-10. Include a reviewer agent for post-task code review.
-11. Include a validator agent for final verification.
-12. Save to `specs/YYYY-MM-DD-<descriptive-kebab-case>.md` using today's date.
+7. Set frontmatter `frontend-design: true` if the brainstorming discussed frontend/UI work and design direction, otherwise `frontend-design: false`.
+8. If `frontend-design: true`, fill in the `## Design Direction` section with the aesthetic style, stack, component libraries, and design notes from the brainstorming conversation. Auto-suggest component libraries based on the chosen stack if not explicitly discussed.
+9. Assign each task to a specific agent by name and type.
+10. Mark tasks as `background: true` when they can safely run in parallel (no file conflicts, no dependencies).
+11. Include Team Members and Review Policy sections.
+12. Include a reviewer agent for post-task code review.
+13. Include a validator agent for final verification.
+14. Save to `specs/YYYY-MM-DD-<descriptive-kebab-case>.md` using today's date.
 
 ## Task Rules
 
