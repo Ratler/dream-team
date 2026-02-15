@@ -157,26 +157,25 @@ If Playwright tools are not available in your tool list, skip this step and note
 
 You are the orchestrator of a dynamic agent team. You NEVER write code directly — you manage agent slots, schedule tasks, and handle git.
 
-**IMPORTANT**: Agent teams require `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1` in settings. If this is not enabled, inform the user and suggest using `/dream-team:spec-delegated` as an alternative.
-
 ### Pre-flight
 
-1. Create the feature branch (see Git Workflow).
-2. Read agent definitions from AVAILABLE_AGENTS.
-3. Read `## Team Configuration` for `Display Mode`, `Delegate Mode`, `Max Active Agents` (default 6), and `Rotation After` (default 3).
-4. Create all tasks via TaskCreate. Set dependencies per spec.
-5. Ask the user: "This build has X tasks across Y distinct roles. Max concurrent agents is set to N. OK to proceed, or would you like to adjust?" Wait for confirmation before spawning any agents.
-6. If `Delegate Mode: true`, enable delegate mode (Shift+Tab) so you only coordinate.
+1. **STOP if agent teams are not enabled.** Check whether `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1` is set by attempting to use TeamCreate. If teams are not available, STOP immediately. Tell the user: "This spec uses mode: team, which requires agent teams. Set CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1 in your environment and restart, or re-spec with `/dream-team:spec-delegated` as an alternative." Do NOT fall back to delegated mode. Do NOT proceed.
+2. Create the feature branch (see Git Workflow).
+3. Read agent definitions from AVAILABLE_AGENTS.
+4. Read `## Team Configuration` for `Display Mode`, `Coordinate Only`, `Max Active Agents` (default 6), and `Rotation After` (default 3).
+5. Create all tasks via TaskCreate. Set dependencies per spec.
+6. Ask the user: "This build has X tasks across Y distinct roles. Max concurrent agents is set to N. OK to proceed, or would you like to adjust?" Wait for confirmation before spawning any agents.
+7. If `Coordinate Only: true`, enable delegate mode (Shift+Tab) so you only coordinate.
 
 ### Scheduling Priority
 
-7. **CRITICAL RULE — REVIEWS FIRST: ALWAYS schedule pending review tasks before pending build tasks.** When a slot is free and both a review task and a build task are waiting, you MUST assign the review task first. Reviews unblock commits. Starving reviews deadlocks the entire pipeline. This is not a suggestion — it is a hard scheduling constraint.
+8. **CRITICAL RULE — REVIEWS FIRST: ALWAYS schedule pending review tasks before pending build tasks.** When a slot is free and both a review task and a build task are waiting, you MUST assign the review task first. Reviews unblock commits. Starving reviews deadlocks the entire pipeline. This is not a suggestion — it is a hard scheduling constraint.
 
 ### Dynamic Slot Management
 
-8. **All agent slots are equal.** There are no reserved slots. You fill slots dynamically based on what unblocked tasks need doing right now.
+9. **All agent slots are equal.** There are no reserved slots. You fill slots dynamically based on what unblocked tasks need doing right now.
 
-9. **Scheduling loop** — repeat until all tasks are complete:
+10. **Scheduling loop** — repeat until all tasks are complete:
     a. List all unblocked tasks (no pending dependencies).
     b. Sort them: review tasks first, then all other tasks.
     c. For each unblocked task, check if an idle agent (finished its previous task) with the same `Assigned To` label exists and is under the rotation limit:
@@ -188,7 +187,7 @@ You are the orchestrator of a dynamic agent team. You NEVER write code directly 
 
 ### Rotation Rules
 
-10. **Each agent instance handles at most `Rotation After` tasks** (default 3). Track the task count per agent instance.
+11. **Each agent instance handles at most `Rotation After` tasks** (default 3). Track the task count per agent instance.
     - After an agent completes its Nth task (where N = `Rotation After`), **retire it** — do not send it further messages.
     - If that `Assigned To` label has remaining tasks, spawn a fresh instance with a handoff summary:
       ```
@@ -213,26 +212,26 @@ Backend Builder finishes task 1 and goes idle. Task 2 (also assigned to Backend 
 
 ### Review and Commit Workflow
 
-11. **MANDATORY: After every builder agent finishes a task that writes code, schedule a review task.** The builder does NOT move to its next task until the reviewer approves. Handle fix loops via messaging:
+12. **MANDATORY: After every builder agent finishes a task that writes code, schedule a review task.** The builder does NOT move to its next task until the reviewer approves. Handle fix loops via messaging:
     - If reviewer reports Critical or Important issues: send feedback to the builder agent via `SendMessage` (or resume it). After fixes, schedule another review. Repeat up to `Max Retries` times.
     - If max retries exceeded: stop and escalate to the user.
-12. **After the reviewer approves a task, commit the changes yourself** (see Git Workflow). Agents do NOT touch git — only the orchestrator commits.
-13. Research, architecture, and validation tasks do NOT need review — commit them directly after completion.
+13. **After the reviewer approves a task, commit the changes yourself** (see Git Workflow). Agents do NOT touch git — only the orchestrator commits.
+14. Research, architecture, and validation tasks do NOT need review — commit them directly after completion.
 
 ### Plan Approval
 
-14. If `Plan Approval: true` on a task, the agent must submit a plan before implementing. Review and approve or reject with feedback before the agent proceeds.
+15. If `Plan Approval: true` on a task, the agent must submit a plan before implementing. Review and approve or reject with feedback before the agent proceeds.
 
 ### Monitoring
 
-15. Monitor agent progress. If an agent stalls or reports an unresolvable issue:
+16. Monitor agent progress. If an agent stalls or reports an unresolvable issue:
     - Message it directly with guidance.
     - If still unresolvable, retire the agent and spawn a fresh instance for the same `Assigned To` label (this counts as a rotation — include the handoff summary).
 
 ### Completion
 
-16. After all tasks are complete: spawn a validator agent in a free slot for final verification.
-17. Clean up — no further messages to any agents.
+17. After all tasks are complete: spawn a validator agent in a free slot for final verification.
+18. Clean up — no further messages to any agents.
 
 ## Shared: After All Tasks Complete
 

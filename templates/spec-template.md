@@ -55,7 +55,7 @@ created: <YYYY-MM-DDTHH:MM:SS ISO date>
 <if mode is team>
 ## Team Configuration
 - **Display Mode**: <in-process | split-pane>
-- **Delegate Mode**: <true if lead should be coordination-only, false otherwise>
+- **Coordinate Only**: <true if lead should only coordinate and never implement directly, false otherwise>
 - **Max Active Agents**: <max concurrent agents, default 6>
 - **Rotation After**: <tasks per agent instance before rotation, default 3>
 </if>

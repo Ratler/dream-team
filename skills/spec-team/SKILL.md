@@ -55,7 +55,7 @@ Use today's date. Example: `specs/2026-02-07-user-auth-api.md`
 ## Team Configuration Guidance
 
 - **Display Mode**: Use `split-pane` if the user has tmux/iTerm2, otherwise `in-process`
-- **Delegate Mode**: Set `true` (recommended) so the lead only coordinates and never implements directly
+- **Coordinate Only**: Set `true` (recommended) so the lead only coordinates and never implements directly
 - **Max Active Agents**: Default 6. This caps concurrent agent instances. The orchestrator asks the user to confirm before starting. Can be increased for large projects with many independent workstreams.
 - **Rotation After**: Default 3. Each agent instance handles at most this many tasks before being retired and replaced with a fresh instance. Prevents context window exhaustion.
 
