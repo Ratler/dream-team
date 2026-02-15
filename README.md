@@ -5,7 +5,7 @@ A Claude Code plugin for planning and executing development projects across thre
 ## Overview
 
 Dream Team provides structured planning skills that generate spec files, and a universal build skill that reads the
-spec and executes it using the appropriate strategy. It ships with seven specialized agents for common development roles.
+spec and executes it using the appropriate strategy. It ships with eight specialized agents for common development roles.
 
 ## Prerequisites
 
@@ -67,7 +67,7 @@ claude plugin install dream-team@dream-team-marketplace
 |---------------------|-----------------------------------------------------------|
 | **Philosophy**      | Turn Claude into a project lead                           |
 | **Skills**          | 6 pipeline-connected skills (plan, spec x3, build, debug) |
-| **Agents**          | 7 named roles with per-agent model and tool policies      |
+| **Agents**          | 8 named roles with per-agent model and tool policies      |
 | **Execution modes** | Sequential, Delegated, Team                               |
 | **Planning**        | Formal specs with YAML frontmatter                        |
 | **Task tracking**   | TaskCreate/TaskUpdate with dependency graph               |
@@ -124,10 +124,12 @@ reproduces the issue, investigates root cause, applies a targeted fix, and verif
 
 ### Hooks
 
-Four JavaScript hooks run at key points in the workflow:
+Five JavaScript hooks run at key points in the workflow:
 
 - **SessionStart** -- Injects plugin context (available agents, spec template location, slash commands) into every new
-  session so Claude knows Dream Team is available.
+  session so Claude knows Dream Team is available. Displays a startup message with the plugin version.
+- **Preflight team check** (PreToolUse hook) -- Blocks team-mode builds when `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS`
+  is not enabled. Fires on every Skill tool call and only intercepts the build skill with a team-mode spec.
 - **Spec exists** (Stop hook) -- After a spec skill finishes, validates that a spec file was actually written to
   `specs/`. _Currently dormant — see [Known Issues](#known-issues)._
 - **Spec sections** (Stop hook) -- Validates that the spec contains all required sections for its declared execution
@@ -144,15 +146,16 @@ Four JavaScript hooks run at key points in the workflow:
 
 ## Agents
 
-| Agent      | Model  | Role                                                      |
-|------------|--------|-----------------------------------------------------------|
-| builder    | opus   | Writes code, runs tests, commits                          |
-| researcher | sonnet | Explores codebases and gathers context (read-only)        |
-| architect  | opus   | Designs systems and makes technical decisions (read-only) |
-| reviewer   | sonnet | Reviews code for correctness and quality (read-only)      |
-| tester     | sonnet | Writes and runs tests                                     |
-| validator  | haiku  | Fast validation checks (read-only)                        |
-| debugger   | opus   | Systematic debugging: reproduce, investigate, fix         |
+| Agent             | Model  | Role                                                      |
+|-------------------|--------|-----------------------------------------------------------|
+| builder           | opus   | Writes code, runs tests, commits                          |
+| researcher        | sonnet | Explores codebases and gathers context (read-only)        |
+| architect         | opus   | Designs systems and makes technical decisions (read-only)  |
+| reviewer          | sonnet | Reviews code for correctness and quality (read-only)       |
+| security-reviewer | opus   | Proactive security audit with structured checklist (read-only) |
+| tester            | sonnet | Writes and runs tests                                      |
+| validator         | haiku  | Fast validation checks (read-only)                         |
+| debugger          | opus   | Systematic debugging: reproduce, investigate, fix          |
 
 
 ## Tests
@@ -165,6 +168,7 @@ or
 
 ```
 node tests/test_session_start.js
+node tests/test_preflight_team_check.js
 node tests/test_validate_spec_exists.js
 node tests/test_validate_spec_sections.js
 node tests/test_validate_build_complete.js
