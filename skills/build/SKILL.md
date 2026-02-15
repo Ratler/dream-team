@@ -79,9 +79,10 @@ You execute tasks directly — no sub-agents.
    - Execute the task yourself — read files, write code, run commands.
    - If `playwright: true` and the task involves UI changes, verify visually using Playwright MCP tools (navigate, screenshot, interact, check console). If Playwright tools are not available, skip and note it.
    - Mark it `completed` via TaskUpdate.
-4. **When you reach a code review task**: re-read every file you changed since the last commit, check for bugs, missing edge cases, security issues, and style problems. Fix anything you find. Then commit all changes from the reviewed task(s) and mark the review task as completed.
-5. If a task fails: stop, report what succeeded and what failed, ask the user how to proceed.
-6. After all tasks: run validation commands, check acceptance criteria.
+4. **After completing all builder tasks and before the final code review task**: run a security review. Read the `security-reviewer` agent definition from AVAILABLE_AGENTS to load the security checklist. List all files changed on the feature branch (`git diff --name-only main...HEAD`). Read every changed file and work through the 6-category security checklist systematically. Report findings using Critical/Important/Minor severity. Fix any Critical or Important issues before proceeding to the code review task.
+5. **When you reach a code review task**: re-read every file you changed since the last commit, check for bugs, missing edge cases, security issues, and style problems. Fix anything you find. Then commit all changes from the reviewed task(s) and mark the review task as completed.
+6. If a task fails: stop, report what succeeded and what failed, ask the user how to proceed.
+7. After all tasks: run validation commands, check acceptance criteria.
 
 ## Mode: Delegated
 
@@ -94,7 +95,7 @@ You are the orchestrator. You NEVER write code directly — you dispatch agents.
 5. For each unblocked task:
    - If `Background: true` and no dependency conflicts, dispatch with `run_in_background: true`.
    - Dispatch the assigned agent via `Task(subagent_type: "<agent-type>", model: "<model>", ...)`.
-   - **IMPORTANT: Always pass the `model` parameter** matching the agent definition. Read each agent's `model` field from their definition file. Do NOT rely on the default — if omitted, subagents inherit the parent model. The correct models are: builder=opus, researcher=sonnet, reviewer=sonnet, tester=sonnet, validator=haiku, architect=opus, debugger=opus.
+   - **IMPORTANT: Always pass the `model` parameter** matching the agent definition. Read each agent's `model` field from their definition file. Do NOT rely on the default — if omitted, subagents inherit the parent model. The correct models are: builder=opus, researcher=sonnet, reviewer=sonnet, tester=sonnet, validator=haiku, architect=opus, debugger=opus, security-reviewer=opus.
    - Provide the FULL task description, relevant file paths, and acceptance criteria in the prompt. Do not tell the agent to read the spec — give it everything.
    - Track the returned `agentId` for resume capability.
 6. **MANDATORY: After every builder task that writes code, dispatch a reviewer agent.** Do NOT skip this step. Do NOT mark the builder task as completed until the reviewer has approved it.
@@ -106,7 +107,11 @@ You are the orchestrator. You NEVER write code directly — you dispatch agents.
      - If max retries exceeded: stop and escalate to the user.
    - If reviewer approves (or only Minor issues): **commit the reviewed changes** (see Git Workflow), then mark task `completed`.
    - Research, architecture, and validation tasks do NOT need review — commit them directly after completion.
-7. After all tasks: dispatch a `validator` agent for final verification.
+7. **After all builder tasks are complete and reviewed, dispatch a `security-reviewer` agent** (model: opus) to audit all files changed on the feature branch. Provide the list of changed files (`git diff --name-only main...HEAD`) and the spec's acceptance criteria.
+   - If the security reviewer reports Critical issues: resume the relevant builder agent to fix them, then re-dispatch the security reviewer. Repeat up to `Max Retries` times.
+   - Important issues: send to the builder for fixing but do not require a security re-review.
+   - Commit security fixes before proceeding to validation.
+8. After all tasks: dispatch a `validator` agent for final verification.
 
 ### Agent Dispatch Template
 
@@ -180,7 +185,7 @@ You are the orchestrator of a dynamic agent team. You NEVER write code directly 
     b. Sort them: review tasks first, then all other tasks.
     c. For each unblocked task, check if an idle agent (finished its previous task) with the same `Assigned To` label exists and is under the rotation limit:
        - **YES → reuse**: Send the task to that idle agent via `SendMessage`. Include full task text, file paths, and acceptance criteria.
-       - **NO idle agent for that label → spawn**: If a slot is free (active agents < `Max Active Agents`), spawn a new agent for this task — even if other busy agents share the same label. Multiple instances of the same label running in parallel is expected when multiple tasks are unblocked. When spawning, specify the model matching the agent type: builder=opus, researcher=sonnet, reviewer=sonnet, tester=sonnet, validator=haiku, architect=opus, debugger=opus. Include full task text, file paths, and acceptance criteria in the spawn prompt. **NOTE**: If the agent teams feature does not support per-agent model selection, all agents will use the session's default model.
+       - **NO idle agent for that label → spawn**: If a slot is free (active agents < `Max Active Agents`), spawn a new agent for this task — even if other busy agents share the same label. Multiple instances of the same label running in parallel is expected when multiple tasks are unblocked. When spawning, specify the model matching the agent type: builder=opus, researcher=sonnet, reviewer=sonnet, tester=sonnet, validator=haiku, architect=opus, debugger=opus, security-reviewer=opus. Include full task text, file paths, and acceptance criteria in the spawn prompt. **NOTE**: If the agent teams feature does not support per-agent model selection, all agents will use the session's default model.
        - **NO free slot → wait**: Monitor active agents. When one completes and frees a slot, return to step (a).
     d. When an agent completes a task and no more unblocked tasks need its `Assigned To` label, the slot is freed. If more tasks for that label are pending but blocked, the slot is also freed (the agent will be respawned when those tasks unblock).
     e. **Never exceed `Max Active Agents` concurrent agents.** If you find yourself about to spawn an agent that would exceed the cap, wait for a slot to free up first.
@@ -230,8 +235,9 @@ Backend Builder finishes task 1 and goes idle. Task 2 (also assigned to Backend 
 
 ### Completion
 
-17. After all tasks are complete: spawn a validator agent in a free slot for final verification.
-18. Clean up — no further messages to any agents.
+17. **Before dispatching the validator**: spawn a `security-reviewer` agent (model: opus) in a free slot to audit all files changed on the feature branch. Provide the list of changed files (`git diff --name-only main...HEAD`) and the spec's acceptance criteria. If Critical issues are found, send them to the relevant builder agent for fixing. After fixes, re-run the security review. Commit security fixes before proceeding to validation.
+18. After all tasks are complete: spawn a validator agent in a free slot for final verification.
+19. Clean up — no further messages to any agents.
 
 ## Shared: After All Tasks Complete
 

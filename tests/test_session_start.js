@@ -63,6 +63,11 @@ test('has additionalContext with dream-team content', () => {
   assert(ctx.includes('debugger'), 'additionalContext does not mention debugger agent');
 });
 
+test('has security-reviewer in additionalContext', () => {
+  const ctx = parsed.hookSpecificOutput.additionalContext;
+  assert(ctx.includes('security-reviewer'), 'additionalContext does not mention security-reviewer agent');
+});
+
 test('has systemMessage with version', () => {
   assert(parsed.systemMessage, 'missing systemMessage');
   assert(typeof parsed.systemMessage === 'string', 'systemMessage is not a string');

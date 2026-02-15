@@ -38,6 +38,7 @@ Dream Team provides structured planning and execution for development projects a
 - researcher: read-only exploration and context gathering (sonnet)
 - architect: design decisions and structural recommendations (opus)
 - reviewer: qualitative code review with severity categories (sonnet)
+- security-reviewer: proactive security audit with structured checklist (opus)
 - tester: writes and runs tests, TDD workflow (sonnet)
 - validator: final mechanical pass/fail verification (haiku)
 - debugger: systematic debugging, reproduces and fixes issues (opus)`;

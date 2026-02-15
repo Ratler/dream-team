@@ -99,6 +99,8 @@ created: <YYYY-MM-DDTHH:MM:SS ISO date>
 - Do NOT add tester tasks just to duplicate the builder's TDD unit tests — the builder already writes those>
 </if>
 
+> **Note:** A security review is automatically run by the build skill after all builder tasks complete. You do not need to add a security review task to your spec — the orchestrator injects it.
+
 ### N-1. Code Review
 - **Task ID**: review-all
 - **Depends On**: <all builder task IDs>
