@@ -45,6 +45,15 @@ Dream Team provides structured planning and execution for development projects a
   return guide;
 }
 
+function buildSystemMessage() {
+  let version = 'unknown';
+  try {
+    const manifest = JSON.parse(fs.readFileSync(path.join(PLUGIN_ROOT, '.claude-plugin', 'plugin.json'), 'utf8'));
+    version = manifest.version;
+  } catch {}
+  return `Dream Team v${version} loaded — use /dream-team:plan to start`;
+}
+
 function main() {
   try {
     // Consume stdin (required by hook protocol)
@@ -55,6 +64,7 @@ function main() {
     const context = buildContext();
 
     const output = {
+      systemMessage: buildSystemMessage(),
       hookSpecificOutput: {
         hookEventName: 'SessionStart',
         additionalContext: context

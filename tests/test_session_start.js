@@ -63,5 +63,11 @@ test('has additionalContext with dream-team content', () => {
   assert(ctx.includes('debugger'), 'additionalContext does not mention debugger agent');
 });
 
+test('has systemMessage with version', () => {
+  assert(parsed.systemMessage, 'missing systemMessage');
+  assert(typeof parsed.systemMessage === 'string', 'systemMessage is not a string');
+  assert(parsed.systemMessage.includes('Dream Team v'), 'systemMessage does not include version prefix');
+});
+
 console.log(`\nResults: ${passed} passed, ${failed} failed`);
 process.exit(failed > 0 ? 1 : 0);
