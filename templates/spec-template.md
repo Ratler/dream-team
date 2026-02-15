@@ -3,6 +3,7 @@ mode: <sequential | delegated | team>
 complexity: <simple | medium | complex>
 type: <feature | fix | refactor | chore | enhancement>
 playwright: <true | false>
+frontend-design: <true | false>
 created: <YYYY-MM-DDTHH:MM:SS ISO date>
 ---
 
@@ -28,6 +29,14 @@ created: <YYYY-MM-DDTHH:MM:SS ISO date>
 <if new files are needed>
 ### New Files
 <list new files to be created with descriptions>
+</if>
+
+<if frontend-design is true>
+## Design Direction
+- **Aesthetic Style**: <chosen aesthetic direction from brainstorming — e.g., minimal, editorial, brutalist, retro-futuristic, or a custom description>
+- **Stack**: <frontend framework and CSS approach — e.g., Vue 3 + Tailwind, React + CSS Modules, Next.js + Tailwind>
+- **Component Libraries**: <recommended component libraries for the stack, filled from brainstorming or auto-suggested based on stack>
+- **Design Notes**: <any specific user preferences from brainstorming — color palette, dark/light mode, typography feel, specific visual references, etc. Use "none" if no specific preferences were stated.>
 </if>
 
 <if complexity is medium/complex>
