@@ -52,11 +52,23 @@ If something is off, go back and rework it. Do not barrel forward past disagreem
 
 ### Phase 4 — Choose How to Execute
 
-After the plan is solid, ask these two questions (one per message):
+After the plan is solid, ask these questions (one per message):
 
-1. **Playwright MCP** — Only ask this if the work involves a frontend, UI, or web interface: "Should agents use Playwright to verify UI changes visually — navigating pages, taking screenshots, clicking through flows, checking for console errors?" For backend-only work, skip this and default to no. Remember the answer — the spec will record it as `playwright: true` or `playwright: false`.
+1. **Design direction** — Only ask this if the work involves a frontend, UI, or web interface. For backend-only work, skip this and default to `frontend-design: false`.
+   - Ask: "What aesthetic direction fits your project?" and present these options (use the Aesthetic Direction Reference in `${CLAUDE_PLUGIN_ROOT}/templates/frontend-design-guidelines.md` for full descriptions):
+     - Minimal / Clean
+     - Editorial / Magazine
+     - Playful / Energetic
+     - Brutalist / Raw
+     - Luxury / Refined
+     - Other (describe your own)
+   - After the user picks, ask a brief follow-up: "Any specific preferences — color palette, dark/light mode, typography feel, visual references? Or should I surprise you?"
+   - For greenfield frontend projects (no existing codebase), also ask about the framework and CSS approach (e.g., React + Tailwind, Vue 3 + CSS Modules, Next.js + Tailwind). For existing projects, note the detected stack from Phase 1.
+   - Remember the design direction — the spec will record it in the `Design Direction` section and set `frontend-design: true`.
 
-2. **Execution tier** — Recommend the tier that fits the work:
+2. **Playwright MCP** — Only ask this if the work involves a frontend, UI, or web interface: "Should agents use Playwright to verify UI changes visually — navigating pages, taking screenshots, clicking through flows, checking for console errors?" For backend-only work, skip this and default to no. Remember the answer — the spec will record it as `playwright: true` or `playwright: false`.
+
+3. **Execution tier** — Recommend the tier that fits the work:
    - **Sequential** — you execute tasks one by one in a single session. Cheapest. Best for small or tightly coupled work.
    - **Delegated** — an orchestrator dispatches specialized sub-agents (builder, researcher, reviewer, etc.). Medium cost. Best for work with clear role boundaries.
    - **Team** — separate Claude instances work in parallel via shared task list. Highest cost. Best for large projects with independent workstreams. Requires `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS`.
