@@ -22,9 +22,10 @@ AVAILABLE_AGENTS: `${CLAUDE_PLUGIN_ROOT}/agents/*.md`
 
 - If no `SPEC_PATH` is provided, stop and ask the user to provide it.
 - Read the spec file at SPEC_PATH.
-- Parse the YAML frontmatter to extract `mode`, `complexity`, `type`, and `playwright`.
+- Parse the YAML frontmatter to extract `mode`, `complexity`, `type`, `playwright`, and `frontend-design`.
 - Based on `mode`, follow the corresponding execution strategy below.
 - If `playwright: true`, append the Playwright instructions (see below) to every builder and tester agent dispatch prompt. If `playwright: false` or missing, do NOT mention Playwright to agents.
+- If `frontend-design: true`, read `${CLAUDE_PLUGIN_ROOT}/templates/frontend-design-guidelines.md` and the spec's `## Design Direction` section. Append the Frontend Design Instructions (see below) to every builder agent dispatch prompt. If `frontend-design: false` or missing, do NOT mention frontend design to agents.
 - **Create a feature branch** before starting any work (see Git Workflow below).
 - Use TaskCreate to register every task from the spec's `## Step by Step Tasks` section.
 - Use TaskUpdate with `addBlockedBy` to set dependencies per each task's `Depends On` field.
@@ -74,15 +75,16 @@ You execute tasks directly — no sub-agents.
 
 1. Create the feature branch (see Git Workflow).
 2. Create all tasks via TaskCreate. Set dependencies so each task blocks on the previous.
-3. For each task in order:
+3. If `frontend-design: true`, read `${CLAUDE_PLUGIN_ROOT}/templates/frontend-design-guidelines.md`. When executing tasks that involve frontend/UI code, apply these guidelines along with the spec's `## Design Direction` section.
+4. For each task in order:
    - Mark it `in_progress` via TaskUpdate.
    - Execute the task yourself — read files, write code, run commands.
    - If `playwright: true` and the task involves UI changes, verify visually using Playwright MCP tools (navigate, screenshot, interact, check console). If Playwright tools are not available, skip and note it.
    - Mark it `completed` via TaskUpdate.
-4. **After completing all builder tasks and before the final code review task**: run a security review. Read the `security-reviewer` agent definition from AVAILABLE_AGENTS to load the security checklist. List all files changed on the feature branch (`git diff --name-only main...HEAD`). Read every changed file and work through the 6-category security checklist systematically. Report findings using Critical/Important/Minor severity. Fix any Critical or Important issues before proceeding to the code review task.
-5. **When you reach a code review task**: re-read every file you changed since the last commit, check for bugs, missing edge cases, security issues, and style problems. Fix anything you find. Then commit all changes from the reviewed task(s) and mark the review task as completed.
-6. If a task fails: stop, report what succeeded and what failed, ask the user how to proceed.
-7. After all tasks: run validation commands, check acceptance criteria.
+5. **After completing all builder tasks and before the final code review task**: run a security review. Read the `security-reviewer` agent definition from AVAILABLE_AGENTS to load the security checklist. List all files changed on the feature branch (`git diff --name-only main...HEAD`). Read every changed file and work through the 6-category security checklist systematically. Report findings using Critical/Important/Minor severity. Fix any Critical or Important issues before proceeding to the code review task.
+6. **When you reach a code review task**: re-read every file you changed since the last commit, check for bugs, missing edge cases, security issues, and style problems. Fix anything you find. Then commit all changes from the reviewed task(s) and mark the review task as completed.
+7. If a task fails: stop, report what succeeded and what failed, ask the user how to proceed.
+8. After all tasks: run validation commands, check acceptance criteria.
 
 ## Mode: Delegated
 
@@ -172,6 +174,24 @@ After making UI changes, verify them visually:
 - Use playwright_click / playwright_fill to test interactions
 - Use playwright_evaluate to check for console errors
 If Playwright tools are not available in your tool list, skip this step and note it in your report.
+```
+
+### Frontend Design Instructions (only if `frontend-design: true`)
+
+Append this block to every **builder** agent dispatch prompt when the spec has `frontend-design: true`. Do NOT include it for reviewer, validator, researcher, or architect agents. Do NOT include it if `frontend-design: false` or missing.
+
+Before dispatching, read `${CLAUDE_PLUGIN_ROOT}/templates/frontend-design-guidelines.md` and include its full content in the builder prompt. Also include the spec's `## Design Direction` section (aesthetic style, stack, component libraries, design notes).
+
+```
+**Frontend Design**: This project has specific design direction. Follow these guidelines for all UI code.
+
+## Design Direction (from spec)
+<paste the spec's Design Direction section here — aesthetic style, stack, component libraries, design notes>
+
+## Frontend Design Guidelines
+<paste the full content of templates/frontend-design-guidelines.md here>
+
+Apply these guidelines to all UI code you write. The Design Direction section takes precedence for project-specific choices (aesthetic style, stack, component libraries). The guidelines provide implementation details (animation timings, interaction patterns, accessibility requirements, anti-generic rules).
 ```
 
 ## Mode: Team
