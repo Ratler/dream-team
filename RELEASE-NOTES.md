@@ -1,5 +1,25 @@
 # Release Notes
 
+## 0.4.1
+
+### Team Mode: Fix Agent Over-Spawning
+
+Fixed a bug where the orchestrator spawned a separate agent for each unique "Assigned To" label in specs. A spec with
+labels like "Builder 1", "Builder 2", "Reviewer 1", "Reviewer 3" would create 14 agents instead of respecting the
+configured max of 6. Root cause: the scheduling loop matched by "Assigned To" label, and the spec generator created
+unique numbered labels per task -- so no agent reuse ever happened.
+
+Three changes:
+
+- The scheduling loop now matches idle agents by **Agent Type** (builder, reviewer, etc.), not by "Assigned To" label.
+  An idle builder agent picks up any unblocked builder task regardless of what the label says.
+- The spec-team skill now bans numbered labels. "Assigned To" must use the plain Agent Type name (e.g., `builder`, not
+  "Security Builder 2"). The orchestrator handles parallelism by spawning multiple instances of the same type.
+- Pre-flight validation counts distinct Agent Types and warns if the spec has numbered labels that could cause
+  over-spawning.
+
+---
+
 ## 0.4.0
 
 ### Proactive Security Reviewer Agent
