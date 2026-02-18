@@ -41,6 +41,7 @@ Use today's date. Example: `specs/2026-02-07-user-auth-api.md`
 ## Task Rules
 
 - Every task must have `Assigned To`, `Agent Type`, `Parallel`, and `Plan Approval`
+- **IMPORTANT — "Assigned To" MUST use the plain Agent Type name.** Use `builder`, `reviewer`, `researcher`, `tester`, `validator`, `architect`, `debugger`, or `security-reviewer`. Do NOT use numbered labels like "Builder 1", "Security Builder 2", "Reviewer 3", "Final Reviewer". The orchestrator schedules by **Agent Type**, NOT by "Assigned To" label. Numbered labels cause the orchestrator to spawn a SEPARATE agent for each unique label, which defeats the agent cap and wastes resources. ALL builder tasks get "Assigned To: builder". ALL review tasks get "Assigned To: reviewer". The orchestrator handles parallelism by spawning multiple instances of the same type when needed.
 - Set `Parallel: true` for tasks that can run alongside others (no shared file edits)
 - Set `Plan Approval: true` for high-risk tasks (architectural decisions, schema changes, security-critical code)
 - Set `Depends On` conservatively — only add real dependencies, let parallelism happen naturally

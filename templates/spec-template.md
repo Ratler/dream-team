@@ -78,7 +78,7 @@ created: <YYYY-MM-DDTHH:MM:SS ISO date>
 - **Description**: <what to do, with specific actions as bullet points>
 - **Tests**: <what tests must be written for this task — specify test file paths, test cases, and expected behaviors. Use "N/A" only for tasks that produce zero testable code (research, docs, config-only).>
 <if mode is delegated or team>
-- **Assigned To**: <agent display name — for delegated mode, must match a Team Members entry; for team mode, a descriptive label used by the orchestrator to group tasks>
+- **Assigned To**: <for delegated mode: agent display name matching a Team Members entry. For team mode: MUST be the plain Agent Type name — e.g., "builder", "reviewer", "researcher". Do NOT use numbered or qualified labels like "Builder 1", "Security Builder 2", "Reviewer 3". The orchestrator schedules by Agent Type, not by this label.>
 - **Agent Type**: <builder | researcher | reviewer | validator | architect | tester>
 </if>
 <if mode is delegated>

@@ -169,75 +169,82 @@ You are the orchestrator of a dynamic agent team. You NEVER write code directly 
 3. Read agent definitions from AVAILABLE_AGENTS.
 4. Read `## Team Configuration` for `Display Mode`, `Coordinate Only`, `Max Active Agents` (default 6), and `Rotation After` (default 3).
 5. Create all tasks via TaskCreate. Set dependencies per spec.
-6. Ask the user: "This build has X tasks across Y distinct roles. Max concurrent agents is set to N. OK to proceed, or would you like to adjust?" Wait for confirmation before spawning any agents.
-7. If `Coordinate Only: true`, enable delegate mode (Shift+Tab) so you only coordinate.
+6. **IMPORTANT — Agent count validation:** Count the number of distinct **Agent Type** values across all tasks (e.g., builder, reviewer, researcher, tester, validator). This is the number of ROLES, NOT the number of agents to spawn. The total concurrent agents at any time MUST NOT exceed `Max Active Agents`. If the spec contains "Assigned To" labels with numbered suffixes (e.g., "Builder 1", "Builder 2", "Reviewer 3") — **IGNORE THE NUMBERS.** These are cosmetic grouping hints, NOT separate agents. You schedule by **Agent Type**, not by "Assigned To" label. See the scheduling loop below.
+7. Ask the user: "This build has X tasks across Y distinct agent types (list them). Max concurrent agents is set to N. OK to proceed, or would you like to adjust?" Wait for confirmation before spawning any agents.
+8. If `Coordinate Only: true`, enable delegate mode (Shift+Tab) so you only coordinate.
 
 ### Scheduling Priority
 
-8. **CRITICAL RULE — REVIEWS FIRST: ALWAYS schedule pending review tasks before pending build tasks.** When a slot is free and both a review task and a build task are waiting, you MUST assign the review task first. Reviews unblock commits. Starving reviews deadlocks the entire pipeline. This is not a suggestion — it is a hard scheduling constraint.
+9. **CRITICAL RULE — REVIEWS FIRST: ALWAYS schedule pending review tasks before pending build tasks.** When a slot is free and both a review task and a build task are waiting, you MUST assign the review task first. Reviews unblock commits. Starving reviews deadlocks the entire pipeline. This is not a suggestion — it is a hard scheduling constraint.
 
 ### Dynamic Slot Management
 
-9. **All agent slots are equal.** There are no reserved slots. You fill slots dynamically based on what unblocked tasks need doing right now.
+> **IMPORTANT — HOW AGENT MATCHING WORKS:** The scheduling loop matches tasks to agents by **Agent Type** (builder, reviewer, researcher, tester, validator, architect, debugger, security-reviewer). It does NOT match by "Assigned To" label. The "Assigned To" field in specs is a COSMETIC HINT for human readers — it has NO effect on scheduling. If a spec says "Assigned To: Security Builder 1" with Agent Type: builder, and another task says "Assigned To: Builder 5" with Agent Type: builder, those are BOTH just `builder` tasks and can be handled by THE SAME agent instance. NEVER create a separate agent instance for each unique "Assigned To" label.
 
-10. **Scheduling loop** — repeat until all tasks are complete:
+10. **All agent slots are equal.** There are no reserved slots. You fill slots dynamically based on what unblocked tasks need doing right now.
+
+11. **Scheduling loop** — repeat until all tasks are complete:
     a. List all unblocked tasks (no pending dependencies).
     b. Sort them: review tasks first, then all other tasks.
-    c. For each unblocked task, check if an idle agent (finished its previous task) with the same `Assigned To` label exists and is under the rotation limit:
-       - **YES → reuse**: Send the task to that idle agent via `SendMessage`. Include full task text, file paths, and acceptance criteria.
-       - **NO idle agent for that label → spawn**: If a slot is free (active agents < `Max Active Agents`), spawn a new agent for this task — even if other busy agents share the same label. Multiple instances of the same label running in parallel is expected when multiple tasks are unblocked. When spawning, specify the model matching the agent type: builder=opus, researcher=sonnet, reviewer=sonnet, tester=sonnet, validator=haiku, architect=opus, debugger=opus, security-reviewer=opus. Include full task text, file paths, and acceptance criteria in the spawn prompt. **NOTE**: If the agent teams feature does not support per-agent model selection, all agents will use the session's default model.
+    c. For each unblocked task, check if an idle agent (finished its previous task) with the same **Agent Type** exists and is under the rotation limit:
+       - **YES → reuse**: Send the task to that idle agent via `SendMessage`. Include full task text, file paths, and acceptance criteria. It does NOT matter if the idle agent's previous task had a different "Assigned To" label — what matters is the **Agent Type** matches.
+       - **NO idle agent of that Agent Type → spawn**: If a slot is free (active agents < `Max Active Agents`), spawn a new agent for this task. When spawning, specify the model matching the agent type: builder=opus, researcher=sonnet, reviewer=sonnet, tester=sonnet, validator=haiku, architect=opus, debugger=opus, security-reviewer=opus. Include full task text, file paths, and acceptance criteria in the spawn prompt. **NOTE**: If the agent teams feature does not support per-agent model selection, all agents will use the session's default model.
        - **NO free slot → wait**: Monitor active agents. When one completes and frees a slot, return to step (a).
-    d. When an agent completes a task and no more unblocked tasks need its `Assigned To` label, the slot is freed. If more tasks for that label are pending but blocked, the slot is also freed (the agent will be respawned when those tasks unblock).
-    e. **Never exceed `Max Active Agents` concurrent agents.** If you find yourself about to spawn an agent that would exceed the cap, wait for a slot to free up first.
+    d. When an agent completes a task and no more unblocked tasks need its **Agent Type**, the slot is freed. If more tasks of that type are pending but blocked, the slot is also freed (an agent will be respawned when those tasks unblock).
+    e. **HARD CAP: NEVER exceed `Max Active Agents` concurrent agents.** If you find yourself about to spawn an agent that would exceed the cap, STOP and wait for a slot to free up first. Count your active agents before every spawn. If active agents >= `Max Active Agents`, you MUST wait.
 
 ### Rotation Rules
 
-11. **Each agent instance handles at most `Rotation After` tasks** (default 3). Track the task count per agent instance.
+12. **Each agent instance handles at most `Rotation After` tasks** (default 3). Track the task count per agent instance.
     - After an agent completes its Nth task (where N = `Rotation After`), **retire it** — do not send it further messages.
-    - If that `Assigned To` label has remaining tasks, spawn a fresh instance with a handoff summary:
+    - If that **Agent Type** has remaining tasks, spawn a fresh instance with a handoff summary:
       ```
-      You are taking over the [Assigned To] role.
+      You are taking over as a [Agent Type] agent.
       Previous instance completed tasks: [task-id-1, task-id-2, task-id-3]
       Commits: [sha1 "message1", sha2 "message2", sha3 "message3"]
       Your remaining tasks: [task-id-4, task-id-5]
       ```
     - The rotation count resets for each new instance.
 
-### Anti-pattern and Correct Pattern
+### Anti-patterns and Correct Patterns
 
-**WRONG — spawning a new instance when an idle one exists:**
-Backend Builder finishes task 1 and goes idle. Task 2 (also assigned to Backend Builder) becomes unblocked. You spawn a SECOND "Backend Builder" instance instead of sending task 2 to the idle one. Now you have two agents for no reason.
+**WRONG — spawning a new agent for each unique "Assigned To" label:**
+The spec has tasks assigned to "Security Builder 1", "Security Builder 2", "Builder 3", "Reviewer 1", "Reviewer 2", etc. You spawn a SEPARATE agent for each label — 14 unique labels = 14 agents. This is WRONG. "Assigned To" labels are cosmetic. All of those builders are Agent Type: builder. All of those reviewers are Agent Type: reviewer. You should have at most a few builder instances and a few reviewer instances, NOT one per label.
 
-**RIGHT — reuse idle instances, parallelize when multiple tasks are unblocked:**
-- Backend Builder finishes task 1. Task 2 is unblocked for the same label. Send task 2 to the SAME agent via `SendMessage` (it's idle and under the rotation limit).
-- But: if tasks 2, 3, and 4 are ALL unblocked simultaneously and 3 slots are free, spawn 3 Backend Builder instances in parallel — one per task. This is correct because each instance handles one concurrent task.
+**WRONG — spawning a new instance when an idle one of the same type exists:**
+A builder agent finishes task 1 and goes idle. Task 2 (Agent Type: builder) becomes unblocked. You spawn a SECOND builder instance instead of sending task 2 to the idle one. Now you have two builder agents for no reason.
+
+**RIGHT — match by Agent Type, reuse idle instances, parallelize when needed:**
+- A builder agent finishes task 1. Task 2 (Agent Type: builder) is unblocked. Send task 2 to the SAME builder agent via `SendMessage` — it is idle and under the rotation limit. It does NOT matter that task 1 was "Assigned To: Security Builder 1" and task 2 is "Assigned To: Builder 4" — they are both Agent Type: builder.
+- A reviewer agent finishes reviewing task 3. Task 5 (Agent Type: reviewer) is unblocked. Send task 5 to the SAME reviewer agent. It does NOT matter that the labels are "Reviewer 1" and "Reviewer 3".
+- But: if tasks 2, 3, and 4 are ALL unblocked simultaneously, all Agent Type: builder, and 3 slots are free, spawn 3 builder instances in parallel — one per task. This is correct because each instance handles one concurrent task.
 - After any instance hits the rotation limit (3 tasks), retire it and spawn fresh if more tasks remain.
 
-**Key rule:** One agent instance = one task at a time. Reuse idle instances before spawning new ones. But DO spawn multiple instances of the same label when multiple tasks can run in parallel.
+**Key rule:** One agent instance = one task at a time. Schedule by **Agent Type**, NEVER by "Assigned To" label. Reuse idle instances of the same type before spawning new ones. But DO spawn multiple instances of the same type when multiple tasks can run in parallel.
 
 ### Review and Commit Workflow
 
-12. **MANDATORY: After every builder agent finishes a task that writes code, schedule a review task.** The builder does NOT move to its next task until the reviewer approves. Handle fix loops via messaging:
+13. **MANDATORY: After every builder agent finishes a task that writes code, schedule a review task.** The builder does NOT move to its next task until the reviewer approves. Handle fix loops via messaging:
     - If reviewer reports Critical or Important issues: send feedback to the builder agent via `SendMessage` (or resume it). After fixes, schedule another review. Repeat up to `Max Retries` times.
     - If max retries exceeded: stop and escalate to the user.
-13. **After the reviewer approves a task, commit the changes yourself** (see Git Workflow). Agents do NOT touch git — only the orchestrator commits.
-14. Research, architecture, and validation tasks do NOT need review — commit them directly after completion.
+14. **After the reviewer approves a task, commit the changes yourself** (see Git Workflow). Agents do NOT touch git — only the orchestrator commits.
+15. Research, architecture, and validation tasks do NOT need review — commit them directly after completion.
 
 ### Plan Approval
 
-15. If `Plan Approval: true` on a task, the agent must submit a plan before implementing. Review and approve or reject with feedback before the agent proceeds.
+16. If `Plan Approval: true` on a task, the agent must submit a plan before implementing. Review and approve or reject with feedback before the agent proceeds.
 
 ### Monitoring
 
-16. Monitor agent progress. If an agent stalls or reports an unresolvable issue:
+17. Monitor agent progress. If an agent stalls or reports an unresolvable issue:
     - Message it directly with guidance.
-    - If still unresolvable, retire the agent and spawn a fresh instance for the same `Assigned To` label (this counts as a rotation — include the handoff summary).
+    - If still unresolvable, retire the agent and spawn a fresh instance of the same **Agent Type** (this counts as a rotation — include the handoff summary).
 
 ### Completion
 
-17. **Before dispatching the validator**: spawn a `security-reviewer` agent (model: opus) in a free slot to audit all files changed on the feature branch. Provide the list of changed files (`git diff --name-only main...HEAD`) and the spec's acceptance criteria. If Critical issues are found, send them to the relevant builder agent for fixing. After fixes, re-run the security review. Commit security fixes before proceeding to validation.
-18. After all tasks are complete: spawn a validator agent in a free slot for final verification.
-19. Clean up — no further messages to any agents.
+18. **Before dispatching the validator**: spawn a `security-reviewer` agent (model: opus) in a free slot to audit all files changed on the feature branch. Provide the list of changed files (`git diff --name-only main...HEAD`) and the spec's acceptance criteria. If Critical issues are found, send them to the relevant builder agent for fixing. After fixes, re-run the security review. Commit security fixes before proceeding to validation.
+19. After all tasks are complete: spawn a validator agent in a free slot for final verification.
+20. Clean up — no further messages to any agents.
 
 ## Shared: After All Tasks Complete
 
