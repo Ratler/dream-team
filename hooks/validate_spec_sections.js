@@ -99,8 +99,18 @@ function getRequiredSections(mode) {
 
 function main() {
   try {
+    let input = {};
     if (!process.stdin.isTTY) {
-      try { fs.readFileSync(0, 'utf8'); } catch {}
+      try {
+        const raw = fs.readFileSync(0, 'utf8');
+        input = JSON.parse(raw);
+      } catch {}
+    }
+
+    // Log last_assistant_message to stderr when available (visible in debug mode)
+    if (input.last_assistant_message) {
+      const truncated = input.last_assistant_message.substring(0, 200);
+      console.error(`[dream-team] last_assistant_message: ${truncated}`);
     }
 
     const args = parseArgs(process.argv);

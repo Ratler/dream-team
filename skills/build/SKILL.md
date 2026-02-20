@@ -105,13 +105,30 @@ You are the orchestrator. You NEVER write code directly — you dispatch agents.
      - After fixes, dispatch reviewer again.
      - Repeat up to `Max Retries` times.
      - If max retries exceeded: stop and escalate to the user.
-   - If reviewer approves (or only Minor issues): **commit the reviewed changes** (see Git Workflow), then mark task `completed`.
-   - Research, architecture, and validation tasks do NOT need review — commit them directly after completion.
+   - If reviewer approves (or only Minor issues): **merge the worktree branch** (see Worktree Merge below), then **commit the merged changes** (see Git Workflow), then mark task `completed`.
+   - Research, architecture, and validation tasks do NOT need review. Read-only agents (researcher, reviewer, validator, security-reviewer, architect) have `isolation: "worktree"` auto-cleaned since they make no file changes — no merge needed. Commit directly after completion.
 7. **After all builder tasks are complete and reviewed, dispatch a `security-reviewer` agent** (model: opus) to audit all files changed on the feature branch. Provide the list of changed files (`git diff --name-only main...HEAD`) and the spec's acceptance criteria.
    - If the security reviewer reports Critical issues: resume the relevant builder agent to fix them, then re-dispatch the security reviewer. Repeat up to `Max Retries` times.
    - Important issues: send to the builder for fixing but do not require a security re-review.
    - Commit security fixes before proceeding to validation.
 8. After all tasks: dispatch a `validator` agent for final verification.
+
+### Worktree Merge
+
+Builder and debugger agents run with `isolation: "worktree"`, meaning each works in a temporary git worktree on its own branch. After a builder/debugger task completes (and after review approval for builder tasks), you must merge the agent's worktree branch back into the feature branch before committing.
+
+**Merge protocol:**
+1. Identify the agent's worktree branch name from the task output or git worktree list.
+2. Ensure you are on the feature branch: `git checkout feat/<spec-name>`.
+3. Merge the worktree branch: `git merge <worktree-branch> --no-ff -m "merge: <task-id> worktree"`.
+4. If merge conflicts occur:
+   - Read the conflicted files and resolve the conflict markers.
+   - Stage the resolved files: `git add <resolved-files>`.
+   - Complete the merge: `git commit --no-edit`.
+   - If resolution fails after 2 attempts, escalate to the user.
+5. After a successful merge, proceed to the commit step (see Git Workflow).
+
+**Note:** Read-only agents (reviewer, validator, researcher, security-reviewer, architect) make no file changes, so their worktrees are automatically cleaned up — no merge is needed for them.
 
 ### Agent Dispatch Template
 
@@ -222,13 +239,32 @@ A builder agent finishes task 1 and goes idle. Task 2 (Agent Type: builder) beco
 
 **Key rule:** One agent instance = one task at a time. Schedule by **Agent Type**, NEVER by "Assigned To" label. Reuse idle instances of the same type before spawning new ones. But DO spawn multiple instances of the same type when multiple tasks can run in parallel.
 
+### Worktree Merge
+
+Builder and debugger agents run with `isolation: "worktree"`, meaning each works in a temporary git worktree on its own branch. After a builder/debugger task completes (and after review approval for builder tasks), you must merge the agent's worktree branch back into the feature branch before committing.
+
+**Merge protocol:**
+1. Identify the agent's worktree branch name from the task output or git worktree list.
+2. Ensure you are on the feature branch: `git checkout feat/<spec-name>`.
+3. Merge the worktree branch: `git merge <worktree-branch> --no-ff -m "merge: <task-id> worktree"`.
+4. If merge conflicts occur:
+   - Read the conflicted files and resolve the conflict markers.
+   - Stage the resolved files: `git add <resolved-files>`.
+   - Complete the merge: `git commit --no-edit`.
+   - If resolution fails after 2 attempts, escalate to the user.
+5. After a successful merge, proceed to the commit step (see Git Workflow).
+
+**Important for team mode:** Multiple builders may complete tasks around the same time. Merge worktree branches **one at a time, sequentially** — never attempt parallel merges. This prevents compounding conflicts. If merge conflicts become frequent, note it in the final report and suggest restructuring tasks for better file-boundary separation in future specs.
+
+**Note:** Read-only agents (reviewer, validator, researcher, security-reviewer, architect) make no file changes, so their worktrees are automatically cleaned up — no merge is needed for them.
+
 ### Review and Commit Workflow
 
 13. **MANDATORY: After every builder agent finishes a task that writes code, schedule a review task.** The builder does NOT move to its next task until the reviewer approves. Handle fix loops via messaging:
     - If reviewer reports Critical or Important issues: send feedback to the builder agent via `SendMessage` (or resume it). After fixes, schedule another review. Repeat up to `Max Retries` times.
     - If max retries exceeded: stop and escalate to the user.
-14. **After the reviewer approves a task, commit the changes yourself** (see Git Workflow). Agents do NOT touch git — only the orchestrator commits.
-15. Research, architecture, and validation tasks do NOT need review — commit them directly after completion.
+14. **After the reviewer approves a task, merge the worktree branch** (see Worktree Merge above), then **commit the merged changes yourself** (see Git Workflow). Agents do NOT touch git — only the orchestrator commits and merges.
+15. Research, architecture, and validation tasks do NOT need review. Read-only agents have their worktrees auto-cleaned — commit directly after completion.
 
 ### Plan Approval
 

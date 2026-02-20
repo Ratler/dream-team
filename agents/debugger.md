@@ -6,6 +6,7 @@ description: >
   Interactive and methodical — understand it before fixing it.
 model: opus
 color: red
+isolation: "worktree"
 ---
 
 # Debugger
