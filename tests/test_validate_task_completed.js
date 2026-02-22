@@ -5,13 +5,11 @@
  * Tests for the TaskCompleted hook (validate_task_completed.js).
  *
  * Verifies:
- * - Builder/debugger tasks with reports → exit 0
- * - Builder/debugger tasks without reports → exit 2
- * - Non-builder/debugger tasks → exit 0 (no validation)
- * - Unknown agent type → exit 0
+ * - All task types exit 0 (logging only, never blocks)
  * - Audit log creation and JSON line format
  * - Multiple completions append to same log
- * - Empty description handling
+ * - Agent type extraction from description
+ * - last_assistant_message logging
  */
 
 const { spawnSync } = require('child_process');
@@ -86,65 +84,41 @@ console.log('========================\n');
 setup();
 
 try {
-  // 1. Builder task WITH report → exit 0
-  test('Builder task with report passes validation', () => {
+  // 1. Builder task always exits 0 (logging only)
+  test('Builder task exits 0 regardless of report', () => {
     const input = makeInput({
-      task_description: '[agent-type: builder]\n## Task Complete\n\n**Task**: Implement auth\n**Status**: Completed\n\n**What was done**:\n- Added login endpoint'
+      task_description: '[agent-type: builder]\nJust a plain description'
     });
     const result = runHook(input);
-    assert(result.status === 0, `Expected exit 0, got ${result.status}. stderr: ${result.stderr}`);
+    assert(result.status === 0, `Expected exit 0, got ${result.status}`);
   });
 
-  // 2. Builder task WITHOUT report → exit 2
-  test('Builder task without report is blocked', () => {
-    const input = makeInput({
-      task_description: '[agent-type: builder]\nJust a plain description with no report markers'
-    });
-    const result = runHook(input);
-    assert(result.status === 2, `Expected exit 2, got ${result.status}`);
-    assert(result.stderr.includes('VALIDATION FAILED'), `Expected validation failure in stderr, got: ${result.stderr}`);
-    assert(result.stderr.includes('builder'), `Expected agent type in stderr, got: ${result.stderr}`);
-  });
-
-  // 3. Debugger task WITH report → exit 0
-  test('Debugger task with report passes validation', () => {
-    const input = makeInput({
-      task_description: '[agent-type: debugger]\n## Debug Complete\n\n**Issue**: Race condition\n**Root Cause**: Missing lock\n**Status**: Completed\n**Fix**: Added mutex'
-    });
-    const result = runHook(input);
-    assert(result.status === 0, `Expected exit 0, got ${result.status}. stderr: ${result.stderr}`);
-  });
-
-  // 4. Debugger task WITHOUT report → exit 2
-  test('Debugger task without report is blocked', () => {
+  // 2. Debugger task always exits 0
+  test('Debugger task exits 0 regardless of report', () => {
     const input = makeInput({
       task_description: '[agent-type: debugger]\nI fixed the bug.'
     });
     const result = runHook(input);
-    assert(result.status === 2, `Expected exit 2, got ${result.status}`);
-    assert(result.stderr.includes('VALIDATION FAILED'), `Expected validation failure in stderr`);
-    assert(result.stderr.includes('debugger'), `Expected agent type in stderr`);
+    assert(result.status === 0, `Expected exit 0, got ${result.status}`);
   });
 
-  // 5. Reviewer task → exit 0, no validation
-  test('Reviewer task passes without report validation', () => {
-    const input = makeInput({
-      task_description: '[agent-type: reviewer]\nSome review notes without formal report markers'
-    });
-    const result = runHook(input);
-    assert(result.status === 0, `Expected exit 0, got ${result.status}. stderr: ${result.stderr}`);
-  });
-
-  // 6. Unknown agent type (no tag) → exit 0
-  test('Unknown agent type passes without validation', () => {
+  // 3. Unknown agent type exits 0
+  test('Unknown agent type exits 0', () => {
     const input = makeInput({
       task_description: 'A task description with no agent-type tag at all'
     });
     const result = runHook(input);
-    assert(result.status === 0, `Expected exit 0, got ${result.status}. stderr: ${result.stderr}`);
+    assert(result.status === 0, `Expected exit 0, got ${result.status}`);
   });
 
-  // 7. Log file creation
+  // 4. Empty description exits 0
+  test('Empty description exits 0', () => {
+    const input = makeInput({ task_description: '' });
+    const result = runHook(input);
+    assert(result.status === 0, `Expected exit 0, got ${result.status}`);
+  });
+
+  // 5. Log file creation
   test('Log directory and file are created', () => {
     const logDir = path.join(tmpDir, 'log-creation-test');
     const input = makeInput({
@@ -157,7 +131,7 @@ try {
     assert(fs.existsSync(logFile), `Log file was not created at ${logFile}`);
   });
 
-  // 8. Log entry format
+  // 6. Log entry format
   test('Log entry contains all expected fields', () => {
     const logDir = path.join(tmpDir, 'entry-format-test');
     const input = makeInput({
@@ -182,11 +156,10 @@ try {
     assert(entry.session === 'session-abc', `Expected session 'session-abc', got '${entry.session}'`);
     assert(entry.cwd === '/my/project', `Expected cwd '/my/project', got '${entry.cwd}'`);
     assert(entry.ts, 'Missing ts field');
-    // Verify ts is a valid ISO date
     assert(!isNaN(new Date(entry.ts).getTime()), `Invalid ts: ${entry.ts}`);
   });
 
-  // 9. Multiple completions append to same log
+  // 7. Multiple completions append to same log
   test('Multiple completions append to same log file', () => {
     const logDir = path.join(tmpDir, 'multi-test');
     const input1 = makeInput({
@@ -210,26 +183,35 @@ try {
     assert(entry2.task_id === 'task-2', `Second entry wrong task_id: ${entry2.task_id}`);
   });
 
-  // 10. Empty description for builder → exit 2
-  test('Builder task with empty description is blocked', () => {
+  // 8. Agent type correctly extracted and logged
+  test('Agent type is extracted from description', () => {
+    const logDir = path.join(tmpDir, 'agent-type-test');
     const input = makeInput({
-      task_description: '[agent-type: builder]'
+      task_description: '[agent-type: security-reviewer]\nSome review',
+      cwd: '/type/project'
     });
-    const result = runHook(input);
-    assert(result.status === 2, `Expected exit 2, got ${result.status}`);
-    assert(result.stderr.includes('VALIDATION FAILED'), `Expected validation failure in stderr`);
+    runHook(input, logDir);
+    const logFile = path.join(logDir, 'type-project.jsonl');
+    const line = fs.readFileSync(logFile, 'utf8').trim();
+    const entry = JSON.parse(line);
+    assert(entry.agent_type === 'security-reviewer', `Expected 'security-reviewer', got '${entry.agent_type}'`);
   });
 
-  // 11. Builder with Status Completed marker but no ## header → exit 0
-  test('Builder with Status Completed marker passes', () => {
+  // 9. Missing tag logs as unknown
+  test('Missing agent-type tag logs as unknown', () => {
+    const logDir = path.join(tmpDir, 'unknown-type-test');
     const input = makeInput({
-      task_description: '[agent-type: builder]\n**Status**: Completed\nDid some work.'
+      task_description: 'No tag here',
+      cwd: '/unknown/project'
     });
-    const result = runHook(input);
-    assert(result.status === 0, `Expected exit 0, got ${result.status}. stderr: ${result.stderr}`);
+    runHook(input, logDir);
+    const logFile = path.join(logDir, 'unknown-project.jsonl');
+    const line = fs.readFileSync(logFile, 'utf8').trim();
+    const entry = JSON.parse(line);
+    assert(entry.agent_type === 'unknown', `Expected 'unknown', got '${entry.agent_type}'`);
   });
 
-  // 12. last_assistant_message logged to stderr
+  // 10. last_assistant_message logged to stderr
   test('last_assistant_message is logged to stderr', () => {
     const input = makeInput({
       task_description: '[agent-type: reviewer]\n## Code Review\n**Status**: Approved',

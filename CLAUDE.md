@@ -44,7 +44,7 @@ This is a Claude Code plugin, not a Node.js application. There is no `package.js
 Hooks are plain Node.js scripts that read stdin and write JSON to stdout:
 - **SessionStart** (`session_start.js`): Async hook. Outputs `{hookSpecificOutput: {hookEventName, additionalContext}}`. Injects usage guide into session context.
 - **Stop hooks** (`validate_spec_exists.js`, `validate_build_complete.js`, `validate_spec_sections.js`): Exit 0 + `{"result":"continue"}` to allow, exit 1 + `{"result":"block","reason":"..."}` to block. Stop hooks in skill frontmatter appear to be working as of Claude Code 2.1.49 (previously broken upstream — claude-code#19225). All Stop hooks log `last_assistant_message` to stderr when available (visible in `claude --debug`).
-- **TaskCompleted** (`validate_task_completed.js`): Exit 0 to allow, exit 2 to block (stderr fed back as feedback). Validates builder/debugger tasks have a structured completion report in the task description. Logs all task completions as JSON lines to `~/.claude/dream-team/logs/<sanitized-cwd>.jsonl`. Uses `DREAM_TEAM_LOG_DIR` env var for test override.
+- **TaskCompleted** (`validate_task_completed.js`): Logging only — always exits 0. Logs all task completions as JSON lines to `~/.claude/dream-team/logs/<sanitized-cwd>.jsonl`. Uses `DREAM_TEAM_LOG_DIR` env var for test override.
 
 ### Skill Pipeline
 

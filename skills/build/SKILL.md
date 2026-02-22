@@ -132,7 +132,7 @@ Builder and debugger agents run with `isolation: "worktree"`, meaning each works
 
 ### Agent Dispatch Template
 
-When creating tasks via TaskCreate, always **prefix the task description** with `[agent-type: <agent-type>]` on its own line. For example, a builder task description starts with `[agent-type: builder]`. This tag is used by the TaskCompleted hook for validation and audit logging.
+When creating tasks via TaskCreate, always **prefix the task description** with `[agent-type: <agent-type>]` on its own line. For example, a builder task description starts with `[agent-type: builder]`. This tag is used by the TaskCompleted hook for audit logging.
 
 When dispatching an agent, provide this context:
 

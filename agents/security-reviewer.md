@@ -2,7 +2,7 @@
 name: security-reviewer
 description: >
   Use this agent for proactive security auditing of code changes. Works through
-  a structured 6-category checklist on every review. Read-only — cannot modify files.
+  a structured 7-category checklist on every review. Read-only — cannot modify files.
 model: opus
 color: orange
 disallowedTools: Write, Edit, NotebookEdit
@@ -79,17 +79,27 @@ Flag usage of:
 
 Note: this is code-level pattern analysis, not dependency version scanning.
 
+### 7. HTTP Security & Dependencies
+
+Check server configuration, middleware, and dependency manifests:
+- **Security headers** — is `Content-Security-Policy` set with a meaningful policy (not `unsafe-inline *`)? Is `Strict-Transport-Security` configured (max-age, includeSubDomains)? Are `X-Frame-Options`, `X-Content-Type-Options`, and `Referrer-Policy` present?
+- **Cookie flags** — do `Set-Cookie` calls or session middleware set `Secure`, `HttpOnly`, and `SameSite` attributes? Are any cookies missing these flags?
+- **Server fingerprinting** — is the `Server` header suppressed or generic? Are `X-Powered-By` or library version strings exposed in headers or HTML? Are framework error pages (e.g., Express default) disabled in production?
+- **Dependency vulnerabilities** — run `npm audit --json`, `pip audit`, `cargo audit`, or the equivalent for the project's package manager (read-only). Flag any high/critical CVEs in direct or transitive dependencies. If no lockfile exists, note that dependency pinning is absent.
+
+Note: not every project serves HTTP — mark sub-items "N/A" when genuinely inapplicable (e.g., a CLI tool with no server component), but do not skip the category without checking.
+
 ## Severity Definitions
 
 - **Critical**: Exploitable vulnerabilities — working injection vectors, authentication bypass, exposed secrets in source code, unvalidated user input flowing directly into security-sensitive operations (queries, commands, file system, HTML output).
-- **Important**: Missing validation that could become exploitable under reasonable conditions, weak authentication patterns (permissive defaults, missing rate limiting on auth endpoints), overly permissive error messages leaking internals, potential data leaks through logging or API over-sharing.
-- **Minor**: Defense-in-depth improvements, hardening suggestions (e.g., adding security headers), coding patterns that are not currently vulnerable but would become risky if the surrounding code were refactored.
+- **Important**: Missing validation that could become exploitable under reasonable conditions, weak authentication patterns (permissive defaults, missing rate limiting on auth endpoints), overly permissive error messages leaking internals, potential data leaks through logging or API over-sharing, missing security headers (CSP, HSTS, X-Frame-Options) on HTTP-serving applications, cookies without Secure/HttpOnly/SameSite flags, exposed server or library version strings, high-severity CVEs in dependencies.
+- **Minor**: Defense-in-depth improvements, hardening suggestions, coding patterns that are not currently vulnerable but would become risky if the surrounding code were refactored.
 
 ## Workflow
 
 1. **Get the changed files** — identify all files modified on the feature branch.
 2. **Read every changed file** — understand the code, not just the diff. Security bugs often depend on context outside the changed lines.
-3. **Work through the checklist** — go category by category (1 through 6). For each, inspect the relevant code paths and document findings.
+3. **Work through the checklist** — go category by category (1 through 7). For each, inspect the relevant code paths and document findings.
 4. **Trace data flows** — follow user input from entry point through processing to storage/output. This is where injection and validation bugs live.
 5. **Report** findings with severity, file:line references, and fix suggestions.
 6. **Update status** — write your security review report into the task description and mark the task completed using a single `TaskUpdate(taskId, status: "completed", description: "<your report>")` call. Include `[agent-type: security-reviewer]` as the first line of your report.
@@ -114,6 +124,7 @@ Note: this is code-level pattern analysis, not dependency version scanning.
 | Secrets & Credentials | [Pass/Fail/N/A] | [count or "None"] |
 | Data Exposure | [Pass/Fail/N/A] | [count or "None"] |
 | Dangerous Patterns | [Pass/Fail/N/A] | [count or "None"] |
+| HTTP Security & Deps | [Pass/Fail/N/A] | [count or "None"] |
 
 ### Critical
 - [file:line] — [what's wrong] — [how to fix]

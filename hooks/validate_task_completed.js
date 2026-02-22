@@ -2,43 +2,23 @@
 'use strict';
 
 /**
- * TaskCompleted hook: Validates builder/debugger task completion reports
- * and logs all task completions to a per-project audit log.
+ * TaskCompleted hook: Logs all task completions to a per-project audit log.
  *
  * Reads task data from stdin (provided by the TaskCompleted hook event).
  *
- * Validation (builder/debugger only):
- *   - Checks that the task description contains a structured completion report
- *   - Blocks completion (exit 2) if report is missing
- *
- * Logging (all task types):
+ * Logging:
  *   - Appends a JSON line to ~/.claude/dream-team/logs/<sanitized-cwd>.jsonl
  *   - Override log directory with DREAM_TEAM_LOG_DIR env var (for testing)
  *
  * Exit codes:
- *   0 = allow completion (validation passed or non-builder/debugger task)
- *   2 = block completion (builder/debugger missing report)
+ *   0 = always (logging only, never blocks)
  */
 
 const fs = require('fs');
 const path = require('path');
 
-// Report markers that indicate a structured completion report exists
-const REPORT_MARKERS = [
-  '## Task Complete',
-  '## Debug Complete',
-  '**Status**: Completed',
-  '**What was done**',
-  '## Code Review',
-  '## Tests Complete',
-  '## Design Complete',
-  '## Research Complete',
-  '## Validation Report',
-  '## Security Review'
-];
-
-// Agent types that require a completion report
-const VALIDATED_TYPES = ['builder', 'debugger'];
+// Agent types (kept for reference, no longer used for validation)
+// const VALIDATED_TYPES = ['builder', 'debugger'];
 
 /**
  * Extract agent type from task description.
@@ -49,14 +29,6 @@ function extractAgentType(description) {
   if (!description) return 'unknown';
   const match = description.match(/\[agent-type:\s*([^\]]+)\]/);
   return match ? match[1].trim() : 'unknown';
-}
-
-/**
- * Check if the description contains any report markers.
- */
-function hasCompletionReport(description) {
-  if (!description) return false;
-  return REPORT_MARKERS.some(marker => description.includes(marker));
 }
 
 /**
@@ -128,27 +100,10 @@ function main() {
 
     const description = input.task_description || '';
     const agentType = extractAgentType(description);
-    const taskId = input.task_id || 'unknown';
-    const taskSubject = input.task_subject || 'unknown';
 
-    // Always log the completion (all agent types)
+    // Log the completion (all agent types)
     writeLogEntry(input, agentType);
 
-    // Validate builder/debugger tasks have a completion report
-    if (VALIDATED_TYPES.includes(agentType)) {
-      if (!hasCompletionReport(description)) {
-        const msg =
-          `VALIDATION FAILED: ${agentType} task ${taskId} (${taskSubject}) ` +
-          `is missing a completion report in the task description.\n\n` +
-          `ACTION REQUIRED: Update the task description with your structured ` +
-          `completion report using TaskUpdate(description: "[agent-type: ${agentType}]\\n` +
-          `## Task Complete\\n...") before marking the task complete.`;
-        console.error(msg);
-        process.exit(2);
-      }
-    }
-
-    // Allow completion
     process.exit(0);
   } catch (err) {
     // Fail open — don't block the build for hook bugs

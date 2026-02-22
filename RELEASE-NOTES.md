@@ -1,5 +1,35 @@
 # Release Notes
 
+## 0.5.0
+
+### TaskCompleted Hook
+
+New hook that fires when any agent marks a task as completed. All completions are logged as JSON lines to
+`~/.claude/dream-team/logs/<project>.jsonl` for per-project audit trails. The hook is logging-only (always exits 0)
+since the platform fires TaskCompleted on events beyond task completion (e.g., ExitPlanMode), making validation
+unreliable.
+
+Agents now embed an `[agent-type: X]` tag in their task descriptions so the hook can identify them without relying on
+hook input fields that don't carry agent metadata. The build skill dispatch template and all eight agent definitions
+were updated to write completion reports into the task description via `TaskUpdate`.
+
+### Security Reviewer: HTTP Security & Dependency Audit
+
+Added a 7th checklist category covering infrastructure-level security concerns that the original 6 code-focused
+categories missed: Content-Security-Policy, HSTS, X-Frame-Options, X-Content-Type-Options, Referrer-Policy, cookie
+Secure/HttpOnly/SameSite flags, server version fingerprinting, and dependency CVE scanning (`npm audit`, `pip audit`,
+`cargo audit`). Missing headers, insecure cookies, exposed versions, and high-severity CVEs are now classified as
+Important rather than Minor hardening suggestions.
+
+### Agent Worktree Isolation and Memory
+
+Builder and debugger agents now declare `isolation: "worktree"` in their frontmatter, giving each agent an independent
+git worktree so concurrent builders cannot conflict. Builder, reviewer, and architect agents use `memory: project` for
+persistent cross-session knowledge. Stop hooks now log `last_assistant_message` to stderr when available for debug
+visibility.
+
+---
+
 ## 0.4.1
 
 ### Team Mode: Fix Agent Over-Spawning
