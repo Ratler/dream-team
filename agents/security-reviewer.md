@@ -92,11 +92,12 @@ Note: this is code-level pattern analysis, not dependency version scanning.
 3. **Work through the checklist** — go category by category (1 through 6). For each, inspect the relevant code paths and document findings.
 4. **Trace data flows** — follow user input from entry point through processing to storage/output. This is where injection and validation bugs live.
 5. **Report** findings with severity, file:line references, and fix suggestions.
-6. **Update status** — use `TaskUpdate` to mark the task `completed` with your verdict.
+6. **Update status** — write your security review report into the task description and mark the task completed using a single `TaskUpdate(taskId, status: "completed", description: "<your report>")` call. Include `[agent-type: security-reviewer]` as the first line of your report.
 
 ## Report Format
 
 ```
+[agent-type: security-reviewer]
 ## Security Review
 
 **Task**: [task name]

@@ -32,8 +32,8 @@ This is a Claude Code plugin, not a Node.js application. There is no `package.js
 
 - **`commands/*.md`** — Slash-command autocomplete entries. Thin wrappers that read and delegate to the matching skill via `${CLAUDE_PLUGIN_ROOT}/skills/<name>/SKILL.md`. Do NOT set `disable-model-invocation: true` on commands that delegate to skills (breaks the Skill tool chain).
 - **`skills/*/SKILL.md`** — Actual skill logic. YAML frontmatter defines name, description, argument hints, and Stop hooks. The `allowed-tools` frontmatter field controls tool access (`disallowed-tools` is not a valid field).
-- **`agents/*.md`** — Agent definitions with model, color, and behavioral instructions. Models: builder=opus, researcher=sonnet, architect=opus, reviewer=sonnet, tester=sonnet, validator=haiku, debugger=opus. Builder and debugger agents use `isolation: "worktree"` for git worktree isolation in delegated/team modes. Builder, reviewer, and architect agents use `memory: project` for persistent cross-session knowledge.
-- **`hooks/*.js`** — JavaScript hooks (Node.js, no external deps). `hooks.json` registers the SessionStart hook. Stop hooks are declared in skill frontmatter under the `hooks:` key.
+- **`agents/*.md`** — Agent definitions with model, color, and behavioral instructions. Models: builder=opus, researcher=sonnet, architect=opus, reviewer=sonnet, tester=sonnet, validator=haiku, debugger=opus. Builder and debugger agents use `isolation: "worktree"` for git worktree isolation in delegated/team modes. Builder, reviewer, and architect agents use `memory: project` for persistent cross-session knowledge. All agents include `[agent-type: X]` in their report format and write reports to the task description via `TaskUpdate(description: ...)`.
+- **`hooks/*.js`** — JavaScript hooks (Node.js, no external deps). `hooks.json` registers SessionStart, PreToolUse, and TaskCompleted hooks. Stop hooks are declared in skill frontmatter under the `hooks:` key.
 - **`templates/spec-template.md`** — Shared spec template with conditional sections per execution mode and YAML frontmatter.
 - **`specs/`** — Generated spec files (date-prefixed: `YYYY-MM-DD-<name>.md`).
 - **`.claude-plugin/plugin.json`** — Plugin manifest. Omit empty string fields (e.g., `homepage: ""` fails URL validation).
@@ -44,6 +44,7 @@ This is a Claude Code plugin, not a Node.js application. There is no `package.js
 Hooks are plain Node.js scripts that read stdin and write JSON to stdout:
 - **SessionStart** (`session_start.js`): Async hook. Outputs `{hookSpecificOutput: {hookEventName, additionalContext}}`. Injects usage guide into session context.
 - **Stop hooks** (`validate_spec_exists.js`, `validate_build_complete.js`, `validate_spec_sections.js`): Exit 0 + `{"result":"continue"}` to allow, exit 1 + `{"result":"block","reason":"..."}` to block. Stop hooks in skill frontmatter appear to be working as of Claude Code 2.1.49 (previously broken upstream — claude-code#19225). All Stop hooks log `last_assistant_message` to stderr when available (visible in `claude --debug`).
+- **TaskCompleted** (`validate_task_completed.js`): Exit 0 to allow, exit 2 to block (stderr fed back as feedback). Validates builder/debugger tasks have a structured completion report in the task description. Logs all task completions as JSON lines to `~/.claude/dream-team/logs/<sanitized-cwd>.jsonl`. Uses `DREAM_TEAM_LOG_DIR` env var for test override.
 
 ### Skill Pipeline
 

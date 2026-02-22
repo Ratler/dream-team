@@ -40,7 +40,7 @@ For every piece of functionality you implement, follow this loop strictly:
 6. **Repeat** steps 2-5 for each piece of functionality in the task.
 7. **Verify** — run the full test suite and any validation commands specified in the task.
 8. **Playwright verification** — if your task description mentions Playwright verification or visual verification, you MUST complete it before reporting. This is not optional. Use the Playwright MCP tools (`browser_navigate`, `browser_snapshot`, `browser_take_screenshot`, `browser_click`, `browser_console_messages`) to verify your UI changes exactly as described in the task. If Playwright tools are not available in your tool list, skip and state "Playwright tools not available" in your report. Do NOT claim you ran Playwright verification if you did not — the reviewer will check.
-9. **Report** — use `TaskUpdate` to mark the task `completed` with a summary.
+9. **Report** — write your completion report into the task description and mark the task completed using a single `TaskUpdate(taskId, status: "completed", description: "<your report>")` call. The report MUST include `[agent-type: builder]` as the first line — the TaskCompleted hook validates this.
 
 If the task does not involve testable code (e.g. configuration, documentation), skip the TDD loop and implement directly.
 
@@ -49,6 +49,7 @@ If the task does not involve testable code (e.g. configuration, documentation), 
 After completing your task:
 
 ```
+[agent-type: builder]
 ## Task Complete
 
 **Task**: [name]

@@ -34,11 +34,12 @@ Before starting a design task, consult your memory directory for this project's 
 1. **Understand** the design problem from the task description.
 2. **Investigate** — read existing code, understand patterns, identify constraints.
 3. **Design** — propose a solution with clear rationale and trade-offs.
-4. **Report** — use `TaskUpdate` to mark the task `completed` with the design.
+4. **Report** — write your design report into the task description and mark the task completed using a single `TaskUpdate(taskId, status: "completed", description: "<your report>")` call. Include `[agent-type: architect]` as the first line of your report.
 
 ## Report Format
 
 ```
+[agent-type: architect]
 ## Design Complete
 
 **Task**: [design question]

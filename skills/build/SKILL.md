@@ -132,6 +132,8 @@ Builder and debugger agents run with `isolation: "worktree"`, meaning each works
 
 ### Agent Dispatch Template
 
+When creating tasks via TaskCreate, always **prefix the task description** with `[agent-type: <agent-type>]` on its own line. For example, a builder task description starts with `[agent-type: builder]`. This tag is used by the TaskCompleted hook for validation and audit logging.
+
 When dispatching an agent, provide this context:
 
 ```
@@ -158,7 +160,8 @@ You are a <agent-type> agent working on the Dream Team project.
 3. Refactor if needed, keeping tests green
 Do NOT write implementation code without a corresponding test. If the task has no testable code, explain why in your report.
 
-When done, use TaskUpdate to mark task <id> as completed with a summary.
+**When done, write your completion report into the task description** using TaskUpdate. Include `[agent-type: <agent-type>]` as the first line of your report, followed by your structured report. Then mark the task completed. You can do both in a single TaskUpdate call:
+TaskUpdate(taskId: "<id>", status: "completed", description: "[agent-type: <agent-type>]\n## Task Complete\n...")
 ```
 
 ### Playwright Instructions (only if `playwright: true`)

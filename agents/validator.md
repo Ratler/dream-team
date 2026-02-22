@@ -28,11 +28,12 @@ You do not interpret intent, give partial credit, or say "close enough." A test 
 1. **Read** the acceptance criteria and validation commands from the task.
 2. **Execute** each validation command. Record output verbatim.
 3. **Check** each acceptance criterion against the evidence.
-4. **Report** — use `TaskUpdate` to mark task `completed` with pass/fail results.
+4. **Report** — write your validation report into the task description and mark the task completed using a single `TaskUpdate(taskId, status: "completed", description: "<your report>")` call. Include `[agent-type: validator]` as the first line of your report.
 
 ## Report Format
 
 ```
+[agent-type: validator]
 ## Validation Report
 
 **Task**: [what was validated]

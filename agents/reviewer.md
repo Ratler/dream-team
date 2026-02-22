@@ -43,11 +43,12 @@ Before starting a review, consult your memory directory for this project's recur
 4. **Check for regressions** — skim related code that wasn't changed to see if the new code breaks assumptions elsewhere.
 5. **Compare** implementation against spec, requirement by requirement. Every requirement either has a matching implementation or is flagged.
 6. **Report** findings with severity, file:line references, and fix suggestions. Every issue gets a concrete "how to fix" — vague feedback is useless.
-7. **Update status** — use `TaskUpdate` to mark the task `completed` with your verdict.
+7. **Update status** — write your review report into the task description and mark the task completed using a single `TaskUpdate(taskId, status: "completed", description: "<your report>")` call. Include `[agent-type: reviewer]` as the first line of your report.
 
 ## Report Format
 
 ```
+[agent-type: reviewer]
 ## Code Review
 
 **Task**: [task name]
