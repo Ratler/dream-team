@@ -223,7 +223,7 @@ You are the orchestrator of a dynamic agent team. You NEVER write code directly 
     a. List all unblocked tasks (no pending dependencies).
     b. Sort them: review tasks first, then all other tasks.
     c. For each unblocked task, determine how to dispatch it:
-       - **Builder or debugger tasks → ALWAYS spawn fresh**: Spawn a new agent with `isolation: "worktree"` for every builder/debugger task. NEVER reuse a builder/debugger via SendMessage — worktree isolation only applies at spawn time, and reused agents lose their worktree. Retire the previous instance (shut it down) before spawning fresh if a slot is needed.
+       - **Builder or debugger tasks → ALWAYS spawn fresh**: Spawn a new agent for every builder/debugger task. NEVER reuse a builder/debugger via SendMessage. Retire the previous instance (shut it down) before spawning fresh if a slot is needed. **Note:** Team mode teammates do NOT support `isolation: "worktree"` — all teammates work in the main directory. To prevent conflicts, commit each builder's changes immediately after review approval (see Commit After Completion) and design specs with non-overlapping file boundaries between parallel builders.
        - **Read-only agent tasks (reviewer, researcher, validator, architect, security-reviewer, tester) → reuse if idle**: Check if an idle agent of the same **Agent Type** exists and is under the rotation limit. If YES, send the task via `SendMessage`. If NO, spawn a new one if a slot is free. It does NOT matter if the idle agent's previous task had a different "Assigned To" label — what matters is the **Agent Type** matches.
        - When spawning any agent, specify the model matching the agent type: builder=opus, researcher=sonnet, reviewer=sonnet, tester=sonnet, validator=haiku, architect=opus, debugger=opus, security-reviewer=opus. Include full task text, file paths, and acceptance criteria in the spawn prompt. **NOTE**: If the agent teams feature does not support per-agent model selection, all agents will use the session's default model.
        - **NO free slot → wait**: Monitor active agents. When one completes and frees a slot, return to step (a).
@@ -254,14 +254,14 @@ A builder agent finishes task 1 and goes idle. Task 2 (Agent Type: builder) beco
 **RIGHT — reuse read-only agents, spawn fresh builders:**
 - A builder agent finishes task 1. Task 2 (Agent Type: builder) is unblocked. **Retire** builder-1 and **spawn a fresh builder** with `isolation: "worktree"` for task 2.
 - A reviewer agent finishes reviewing task 3. Task 5 (Agent Type: reviewer) is unblocked. Send task 5 to the SAME reviewer agent via `SendMessage` — reviewers are read-only and don't need worktree isolation. It does NOT matter that the labels are "Reviewer 1" and "Reviewer 3".
-- If tasks 2, 3, and 4 are ALL unblocked simultaneously, all Agent Type: builder, and 3 slots are free, spawn 3 builder instances in parallel — one per task. Each gets its own worktree.
+- If tasks 2, 3, and 4 are ALL unblocked simultaneously, all Agent Type: builder, and 3 slots are free, spawn 3 builder instances in parallel — one per task. Since team mode has no worktree isolation, ensure these tasks touch different files.
 - After any read-only instance hits the rotation limit (3 tasks), retire it and spawn fresh if more tasks remain. Builders are always fresh per task so rotation doesn't apply to them.
 
-**Key rule:** One agent instance = one task at a time. Schedule by **Agent Type**, NEVER by "Assigned To" label. Reuse idle read-only agents before spawning new ones. NEVER reuse builder/debugger agents — always spawn fresh with `isolation: "worktree"`. DO spawn multiple instances of the same type when multiple tasks can run in parallel.
+**Key rule:** One agent instance = one task at a time. Schedule by **Agent Type**, NEVER by "Assigned To" label. Reuse idle read-only agents before spawning new ones. NEVER reuse builder/debugger agents — always spawn fresh. DO spawn multiple instances of the same type when multiple tasks can run in parallel, but only when they touch different files.
 
 ### Commit After Completion
 
-Builder and debugger agents run with `isolation: "worktree"`. When the agent completes, the platform auto-cleans the worktree and deposits the agent's changes as uncommitted files in the main working directory. There is no separate branch to merge.
+Team mode teammates do NOT support `isolation: "worktree"` — all teammates work directly in the main directory. Committing immediately after each builder completes is the primary mechanism for preventing conflicts.
 
 **Protocol:**
 1. After a builder/debugger task completes (and after review approval for builder tasks), check `git status` in the main working directory.

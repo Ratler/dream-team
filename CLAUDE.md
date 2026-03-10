@@ -57,11 +57,12 @@ Hooks are plain Node.js scripts that read stdin and write JSON to stdout:
 
 - **Sequential**: Single session, tasks run one at a time, no sub-agents
 - **Delegated**: Orchestrator dispatches to typed sub-agents (Task tool with `subagent_type` and `model`). Builder/debugger agents are always spawned fresh with `isolation: "worktree"` (never reused — worktrees only apply at spawn time). Worktree auto-cleanup deposits changes in main directory; orchestrator commits immediately after each builder completes.
-- **Team**: Parallel Claude instances via shared task list. Requires `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1` env var. Same worktree behavior as delegated — commit before dispatching next builder to prevent overlap.
+- **Team**: Parallel Claude instances via shared task list. Requires `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1` env var. Teammates do NOT support `isolation: "worktree"` — all work in the main directory. Commit immediately after each builder completes; design specs with non-overlapping file boundaries for parallel builders.
 
 ## Known Constraints
 
 - Stop hooks in SKILL.md frontmatter appear to be working as of Claude Code 2.1.49 (previously broken — claude-code#19225). SessionStart hook in `hooks.json` works fine.
 - Background subagents cannot use Bash (auto-denied by permission handlers) — use foreground agents for git/node commands.
+- Team mode teammates do not support `isolation: "worktree"` — only delegated mode subagents (Agent/Task tool) get worktree isolation. In team mode, commit-after-completion and file-boundary separation are the isolation mechanisms.
 - Plugin manifest: omit empty string fields; they fail URL validation.
 - Instructions written as passive/conditional sidebars get ignored by Claude — make them structural numbered steps in the process flow.
