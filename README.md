@@ -32,6 +32,14 @@ claude mcp add playwright npx @playwright/mcp@latest
 
 Without it, agents will skip visual verification and note it in their reports.
 
+### Frontend Design Direction
+
+For frontend/UI work, the planning skill asks about aesthetic direction (Minimal, Editorial, Brutalist,
+Retro-Futuristic, and others) along with color palette, dark/light mode, and typography preferences. When the spec
+sets `frontend-design: true`, the build skill injects comprehensive design guidelines into builder prompts — covering
+anti-generic rules, typography, animation timing, interaction patterns, accessibility, and component library
+recommendations. This prevents the default "AI look" of generic cards and purple gradients.
+
 ## Installation
 
 Register the repository as a local marketplace, then install:
@@ -75,6 +83,7 @@ claude plugin install dream-team@dream-team-marketplace
 | **Code review**     | Configurable review policy with retry loops               |
 | **Team support**    | Parallel Claude instances via experimental agent teams    |
 | **Playwright**      | First-class integration (opt-in per spec)                 |
+| **Frontend design** | Aesthetic direction, anti-generic rules, guidelines       |
 | **Validation**      | Hook-enforced (preflight checks, can't skip)              |
 
 
@@ -124,25 +133,19 @@ reproduces the issue, investigates root cause, applies a targeted fix, and verif
 
 ### Hooks
 
-Five JavaScript hooks run at key points in the workflow:
+Six JavaScript hooks run at key points in the workflow:
 
 - **SessionStart** -- Injects plugin context (available agents, spec template location, slash commands) into every new
   session so Claude knows Dream Team is available. Displays a startup message with the plugin version.
 - **Preflight team check** (PreToolUse hook) -- Blocks team-mode builds when `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS`
   is not enabled. Fires on every Skill tool call and only intercepts the build skill with a team-mode spec.
+- **TaskCompleted** -- Logs all task completions as JSON lines to `~/.claude/dream-team/logs/<project>.jsonl` for
+  per-project audit trails. Logging only — never blocks.
 - **Spec exists** (Stop hook) -- After a spec skill finishes, validates that a spec file was actually written to
-  `specs/`. _Currently dormant — see [Known Issues](#known-issues)._
+  `specs/`.
 - **Spec sections** (Stop hook) -- Validates that the spec contains all required sections for its declared execution
-  mode. _Currently dormant — see [Known Issues](#known-issues)._
+  mode.
 - **Build complete** (Stop hook) -- After a build skill finishes, checks that all tasks reached the `completed` state.
-  _Currently dormant — see [Known Issues](#known-issues)._
-
-## Known Issues
-
-- **Stop hooks in skill frontmatter do not fire** ([anthropics/claude-code#19225](https://github.com/anthropics/claude-code/issues/19225)).
-  The three validation hooks (spec exists, spec sections, build complete) are wired correctly in skill frontmatter but
-  Claude Code never invokes them. The SessionStart hook in `hooks.json` works fine. The Stop hooks will activate once
-  the upstream bug is fixed, no changes needed on our side.
 
 ## Agents
 
@@ -172,6 +175,9 @@ node tests/test_preflight_team_check.js
 node tests/test_validate_spec_exists.js
 node tests/test_validate_spec_sections.js
 node tests/test_validate_build_complete.js
+node tests/test_validate_task_completed.js
+node tests/test_hook_last_message_logging.js
+node tests/test_frontend_design_integration.js
 ```
 
 ## License

@@ -1,5 +1,33 @@
 # Release Notes
 
+## 0.6.0
+
+### Frontend Design Integration
+
+The planning skill now asks about aesthetic direction for frontend/UI work — presenting 10 named styles (Minimal,
+Editorial, Brutalist, Retro-Futuristic, etc.) and following up on color palette, dark/light mode, and typography
+preferences. All three spec-writing skills record the choices in a `## Design Direction` section and set
+`frontend-design: true` in frontmatter.
+
+When the build skill detects `frontend-design: true`, it reads `templates/frontend-design-guidelines.md` and injects
+the full guidelines into every builder agent prompt. The guidelines cover anti-generic rules (avoiding the "AI look"),
+typography principles, color and theme, animation timing, interaction patterns, accessibility requirements, component
+library recommendations (React, Vue, generic), and layout principles.
+
+### Native agent_type in TaskCompleted Hook
+
+The TaskCompleted hook now reads the native `agent_type` field from hook events (available since Claude Code 2.1.69),
+falling back to `[agent-type: X]` tag parsing in task descriptions for older versions.
+
+### Worktree Dispatch Fixes
+
+Builder and debugger agents are now always spawned fresh — never reused via SendMessage — because worktree isolation
+only applies at spawn time. The merge protocol was replaced with commit-after-completion since worktree auto-cleanup
+deposits changes directly into the main working directory. Both delegated and team mode dispatch instructions were
+updated.
+
+---
+
 ## 0.5.0
 
 ### TaskCompleted Hook
