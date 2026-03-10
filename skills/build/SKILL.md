@@ -136,7 +136,7 @@ When creating tasks via TaskCreate, always **prefix the task description** with 
 When dispatching an agent, provide this context:
 
 ```
-You are a <agent-type> agent working on the Dream Team project.
+You are a <agent-type> agent.
 
 **Your Task**: <task name>
 **Task ID**: <id>
