@@ -183,22 +183,37 @@ try {
     assert(entry2.task_id === 'task-2', `Second entry wrong task_id: ${entry2.task_id}`);
   });
 
-  // 8. Agent type correctly extracted and logged
-  test('Agent type is extracted from description', () => {
-    const logDir = path.join(tmpDir, 'agent-type-test');
+  // 8. Native agent_type field is preferred over tag
+  test('Native agent_type field takes precedence over tag', () => {
+    const logDir = path.join(tmpDir, 'native-type-test');
     const input = makeInput({
-      task_description: '[agent-type: security-reviewer]\nSome review',
-      cwd: '/type/project'
+      agent_type: 'builder',
+      task_description: '[agent-type: reviewer]\nMismatched tag',
+      cwd: '/native/project'
     });
     runHook(input, logDir);
-    const logFile = path.join(logDir, 'type-project.jsonl');
+    const logFile = path.join(logDir, 'native-project.jsonl');
+    const line = fs.readFileSync(logFile, 'utf8').trim();
+    const entry = JSON.parse(line);
+    assert(entry.agent_type === 'builder', `Expected 'builder' from native field, got '${entry.agent_type}'`);
+  });
+
+  // 9. Falls back to tag when native agent_type is absent
+  test('Falls back to description tag when native field is absent', () => {
+    const logDir = path.join(tmpDir, 'fallback-type-test');
+    const input = makeInput({
+      task_description: '[agent-type: security-reviewer]\nSome review',
+      cwd: '/fallback/project'
+    });
+    runHook(input, logDir);
+    const logFile = path.join(logDir, 'fallback-project.jsonl');
     const line = fs.readFileSync(logFile, 'utf8').trim();
     const entry = JSON.parse(line);
     assert(entry.agent_type === 'security-reviewer', `Expected 'security-reviewer', got '${entry.agent_type}'`);
   });
 
-  // 9. Missing tag logs as unknown
-  test('Missing agent-type tag logs as unknown', () => {
+  // 10. Missing both native field and tag logs as unknown
+  test('Missing native field and tag logs as unknown', () => {
     const logDir = path.join(tmpDir, 'unknown-type-test');
     const input = makeInput({
       task_description: 'No tag here',
@@ -211,7 +226,7 @@ try {
     assert(entry.agent_type === 'unknown', `Expected 'unknown', got '${entry.agent_type}'`);
   });
 
-  // 10. last_assistant_message logged to stderr
+  // 11. last_assistant_message logged to stderr
   test('last_assistant_message is logged to stderr', () => {
     const input = makeInput({
       task_description: '[agent-type: reviewer]\n## Code Review\n**Status**: Approved',

@@ -5,6 +5,8 @@
  * TaskCompleted hook: Logs all task completions to a per-project audit log.
  *
  * Reads task data from stdin (provided by the TaskCompleted hook event).
+ * Uses native agent_type field (since Claude Code 2.1.69) with fallback
+ * to [agent-type: X] tag in task description for older versions.
  *
  * Logging:
  *   - Appends a JSON line to ~/.claude/dream-team/logs/<sanitized-cwd>.jsonl
@@ -17,16 +19,14 @@
 const fs = require('fs');
 const path = require('path');
 
-// Agent types (kept for reference, no longer used for validation)
-// const VALIDATED_TYPES = ['builder', 'debugger'];
-
 /**
- * Extract agent type from task description.
- * Looks for [agent-type: <type>] pattern.
- * Returns the type string or 'unknown' if not found.
+ * Resolve agent type from hook input.
+ * Prefers native agent_type field (available since Claude Code 2.1.69),
+ * falls back to [agent-type: <type>] tag in task description.
  */
-function extractAgentType(description) {
-  if (!description) return 'unknown';
+function resolveAgentType(input) {
+  if (input.agent_type) return input.agent_type;
+  const description = input.task_description || '';
   const match = description.match(/\[agent-type:\s*([^\]]+)\]/);
   return match ? match[1].trim() : 'unknown';
 }
@@ -98,8 +98,7 @@ function main() {
       console.error(`[dream-team] last_assistant_message: ${truncated}`);
     }
 
-    const description = input.task_description || '';
-    const agentType = extractAgentType(description);
+    const agentType = resolveAgentType(input);
 
     // Log the completion (all agent types)
     writeLogEntry(input, agentType);
