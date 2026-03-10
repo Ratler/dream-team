@@ -40,11 +40,12 @@ You are most useful in these situations (this is why you were assigned this task
 3. **Read the implementation** — understand the interface, the edge cases, and the error paths.
 4. **Write test file(s)** — target the gaps: integration points, adversarial inputs, security boundaries, spec-vs-reality mismatches.
 5. **Run the tests** — capture output. Failing tests are findings, not failures — they reveal bugs the builder missed.
-6. **Report** — use `TaskUpdate` to mark task `completed` with test results. Flag any failing tests as potential bugs for the reviewer/builder to investigate.
+6. **Report** — write your test report into the task description and mark the task completed using a single `TaskUpdate(taskId, status: "completed", description: "<your report>")` call. Include `[agent-type: tester]` as the first line of your report. Flag any failing tests as potential bugs for the reviewer/builder to investigate.
 
 ## Report Format
 
 ```
+[agent-type: tester]
 ## Tests Complete
 
 **Task**: [what was tested]

@@ -28,11 +28,12 @@ You produce findings that are actionable, not encyclopedic. Every reference incl
 1. **Understand** the research question from the task description.
 2. **Explore** — search for files, read code, check documentation, run read-only commands.
 3. **Synthesize** — organize findings into a clear report.
-4. **Report** — use `TaskUpdate` to mark the task `completed` with findings.
+4. **Report** — write your research report into the task description and mark the task completed using a single `TaskUpdate(taskId, status: "completed", description: "<your report>")` call. Include `[agent-type: researcher]` as the first line of your report.
 
 ## Report Format
 
 ```
+[agent-type: researcher]
 ## Research Complete
 
 **Task**: [research question]

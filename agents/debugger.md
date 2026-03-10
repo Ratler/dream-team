@@ -6,6 +6,7 @@ description: >
   Interactive and methodical — understand it before fixing it.
 model: opus
 color: red
+isolation: "worktree"
 ---
 
 # Debugger
@@ -62,17 +63,19 @@ Your instincts are calibrated by experience: off-by-one errors, stale caches, ti
 
 ### 6. Update Status
 
-- Use `TaskUpdate` to mark the task `completed` with a summary of the fix.
+- Write your completion report into the task description and mark the task completed using a single `TaskUpdate(taskId, status: "completed", description: "<your report>")` call. The report MUST include `[agent-type: debugger]` as the first line — the TaskCompleted hook validates this.
 
 ## Report
 
 After completing the debugging session:
 
 ```
-Debug Complete
+[agent-type: debugger]
+## Debug Complete
 
-Issue: [description]
-Root Cause: [what was wrong and why]
-Fix: [file:line — what changed]
-Verification: [tests passed, issue no longer reproduces]
+**Issue**: [description]
+**Root Cause**: [what was wrong and why]
+**Status**: Completed
+**Fix**: [file:line — what changed]
+**Verification**: [tests passed, issue no longer reproduces]
 ```

@@ -22,6 +22,16 @@
           }
         ]
       }
+    ],
+    "TaskCompleted": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node ${CLAUDE_PLUGIN_ROOT}/hooks/validate_task_completed.js"
+          }
+        ]
+      }
     ]
   }
 }

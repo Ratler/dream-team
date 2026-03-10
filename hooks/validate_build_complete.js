@@ -20,6 +20,12 @@ function main() {
       } catch {}
     }
 
+    // Log last_assistant_message to stderr when available (visible in debug mode)
+    if (input.last_assistant_message) {
+      const truncated = input.last_assistant_message.substring(0, 200);
+      console.error(`[dream-team] last_assistant_message: ${truncated}`);
+    }
+
     const tasks = input.tasks || [];
 
     if (tasks.length === 0) {
