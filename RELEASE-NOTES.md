@@ -1,5 +1,23 @@
 # Release Notes
 
+## 0.6.1
+
+### Worktree and Git Workflow Fixes
+
+Fixed three issues discovered during real-world team and delegated mode builds:
+
+- **Team mode has no worktree isolation** — teammates spawned via TeammateTool silently ignore `isolation: "worktree"`.
+  Updated team mode to rely on commit-after-completion and file-boundary separation instead of worktrees.
+- **Delegated mode builders must commit inside worktrees** — the orchestrator cannot reach into a worktree to commit.
+  Builders and debuggers now commit their own changes (conventional commit format) before marking tasks complete. The
+  orchestrator merges the worktree branch back after review approval.
+- **Task IDs removed from commit messages** — internal task IDs should not appear in git history. All commit formats
+  now use conventional commits (`feat(scope): description`) with no task ID references.
+- **Removed hardcoded project name** from the dispatch template — agents no longer claim to be working on
+  "the Dream Team project."
+
+---
+
 ## 0.6.0
 
 ### Frontend Design Integration
