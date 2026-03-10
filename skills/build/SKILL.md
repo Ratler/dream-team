@@ -35,7 +35,9 @@ AVAILABLE_AGENTS: `${CLAUDE_PLUGIN_ROOT}/agents/*.md`
 
 ## Git Workflow
 
-**Agents do NOT touch git.** All git operations are handled by the orchestrator (you).
+**Delegated mode**: Builder and debugger agents running in worktrees MUST commit their own changes inside the worktree before marking the task complete. The orchestrator then merges the worktree branch back into the feature branch. Read-only agents do not commit.
+
+**Team mode**: Agents do NOT touch git. All git operations are handled by the orchestrator (teammates have no worktree isolation).
 
 ### Branch
 
@@ -58,12 +60,10 @@ Commit after each task passes review — never before review approval. This ensu
 Use this commit message format:
 ```
 git add <files changed by the task>
-git commit -m "<type>(<scope>): <what changed>
-
-Task: <task-id>"
+git commit -m "<type>(<scope>): <what changed>"
 ```
 
-Where `<type>` is one of: `feat`, `fix`, `refactor`, `test`, `docs`, `chore`. Keep the first line under 72 characters.
+Where `<type>` is one of: `feat`, `fix`, `refactor`, `test`, `docs`, `chore`. Keep the first line under 72 characters. Do NOT include internal task IDs in commit messages.
 
 ### After Validation
 
@@ -108,25 +108,26 @@ You are the orchestrator. You NEVER write code directly — you dispatch agents.
      - After fixes, dispatch reviewer again.
      - Repeat up to `Max Retries` times.
      - If max retries exceeded: stop and escalate to the user.
-   - If reviewer approves (or only Minor issues): **commit the changes immediately** (see Commit After Completion below), then mark task `completed`.
-   - Research, architecture, and validation tasks do NOT need review. Commit directly after completion.
+   - If reviewer approves (or only Minor issues): **merge the worktree branch** (see Worktree Merge below), then mark task `completed`.
+   - Research, architecture, and validation tasks do NOT need review. No merge needed (read-only agents).
 7. **After all builder tasks are complete and reviewed, dispatch a `security-reviewer` agent** (model: opus) to audit all files changed on the feature branch. Provide the list of changed files (`git diff --name-only main...HEAD`) and the spec's acceptance criteria.
    - If the security reviewer reports Critical issues: resume the relevant builder agent to fix them, then re-dispatch the security reviewer. Repeat up to `Max Retries` times.
    - Important issues: send to the builder for fixing but do not require a security re-review.
    - Commit security fixes before proceeding to validation.
 8. After all tasks: dispatch a `validator` agent for final verification.
 
-### Commit After Completion
+### Worktree Merge (Delegated Mode)
 
-Builder and debugger agents run with `isolation: "worktree"`. When the agent completes, the platform auto-cleans the worktree and deposits the agent's changes as uncommitted files in the main working directory. There is no separate branch to merge.
+Builder and debugger agents run with `isolation: "worktree"`, each on its own branch. The agent commits its work inside the worktree before marking the task complete. After review approval, the orchestrator merges the worktree branch back into the feature branch.
 
 **Protocol:**
-1. After a builder/debugger task completes (and after review approval for builder tasks), check `git status` in the main working directory.
-2. Stage and commit the agent's changes immediately: `git add <changed-files> && git commit -S -m "<task-id>: <summary>"`.
-3. **Commit before dispatching the next builder** — if two builders' uncommitted changes overlap in the working directory, you lose isolation. Sequential commit-then-dispatch prevents this.
-4. If no changes are visible (agent made no file modifications), note it and move on.
+1. After a builder/debugger task completes and the reviewer approves, identify the worktree branch from the task output or `git worktree list` / `git branch`.
+2. Ensure you are on the feature branch: `git checkout feat/<spec-name>`.
+3. Merge the worktree branch: `git merge <worktree-branch> --no-ff -m "merge: <worktree-branch>"`.
+4. If merge conflicts occur: resolve them, stage, and complete the merge. If resolution fails after 2 attempts, escalate to the user.
+5. **Merge before dispatching the next builder** — sequential merge-then-dispatch prevents compounding conflicts.
 
-**Note:** Read-only agents (reviewer, validator, researcher, security-reviewer, architect) make no file changes, so no commit is needed after them.
+**Note:** Read-only agents (reviewer, validator, researcher, security-reviewer, architect) make no file changes — no merge needed.
 
 ### Agent Dispatch Template
 
@@ -158,7 +159,9 @@ You are a <agent-type> agent working on the Dream Team project.
 3. Refactor if needed, keeping tests green
 Do NOT write implementation code without a corresponding test. If the task has no testable code, explain why in your report.
 
-**When done, write your completion report into the task description** using TaskUpdate. Include `[agent-type: <agent-type>]` as the first line of your report, followed by your structured report. Then mark the task completed. You can do both in a single TaskUpdate call:
+**Before marking done, commit your changes** with `git add <files> && git commit -m "<type>(<scope>): <what changed>"`. Use conventional commit format (feat, fix, refactor, test, docs, chore). Do NOT include task IDs. This is required so the orchestrator can merge your worktree branch back into the feature branch.
+
+**Then write your completion report into the task description** using TaskUpdate. Include `[agent-type: <agent-type>]` as the first line of your report, followed by your structured report. Then mark the task completed. You can do both in a single TaskUpdate call:
 TaskUpdate(taskId: "<id>", status: "completed", description: "[agent-type: <agent-type>]\n## Task Complete\n...")
 ```
 
@@ -265,7 +268,7 @@ Team mode teammates do NOT support `isolation: "worktree"` — all teammates wor
 
 **Protocol:**
 1. After a builder/debugger task completes (and after review approval for builder tasks), check `git status` in the main working directory.
-2. Stage and commit the agent's changes immediately: `git add <changed-files> && git commit -S -m "<task-id>: <summary>"`.
+2. Stage and commit the agent's changes immediately: `git add <changed-files> && git commit -S -m "<type>(<scope>): <what changed>"`.
 3. **Commit before dispatching the next builder** — if two builders' uncommitted changes overlap in the working directory, you lose isolation. Sequential commit-then-dispatch prevents this.
 4. If no changes are visible (agent made no file modifications), note it and move on.
 

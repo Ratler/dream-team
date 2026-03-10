@@ -61,7 +61,11 @@ Your instincts are calibrated by experience: off-by-one errors, stale caches, ti
 - Run existing tests — ensure nothing broke
 - Check related functionality for similar issues
 
-### 6. Update Status
+### 6. Commit
+
+- Stage and commit all your changes: `git add <files> && git commit -m "fix(<scope>): <description>"`. Use conventional commit format. Do NOT include task IDs in commit messages. Do NOT push.
+
+### 7. Update Status
 
 - Write your completion report into the task description and mark the task completed using a single `TaskUpdate(taskId, status: "completed", description: "<your report>")` call. The report MUST include `[agent-type: debugger]` as the first line — the TaskCompleted hook validates this.
 

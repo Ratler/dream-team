@@ -56,7 +56,7 @@ Hooks are plain Node.js scripts that read stdin and write JSON to stdout:
 ### Execution Modes
 
 - **Sequential**: Single session, tasks run one at a time, no sub-agents
-- **Delegated**: Orchestrator dispatches to typed sub-agents (Task tool with `subagent_type` and `model`). Builder/debugger agents are always spawned fresh with `isolation: "worktree"` (never reused — worktrees only apply at spawn time). Worktree auto-cleanup deposits changes in main directory; orchestrator commits immediately after each builder completes.
+- **Delegated**: Orchestrator dispatches to typed sub-agents (Task tool with `subagent_type` and `model`). Builder/debugger agents are always spawned fresh with `isolation: "worktree"` (never reused — worktrees only apply at spawn time). Builders commit inside the worktree; orchestrator merges the worktree branch back after review approval.
 - **Team**: Parallel Claude instances via shared task list. Requires `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1` env var. Teammates do NOT support `isolation: "worktree"` — all work in the main directory. Commit immediately after each builder completes; design specs with non-overlapping file boundaries for parallel builders.
 
 ## Known Constraints
