@@ -4,6 +4,7 @@ complexity: <simple | medium | complex>
 type: <feature | fix | refactor | chore | enhancement>
 playwright: <true | false>
 frontend-design: <true | false>
+spec-version: 1
 created: <YYYY-MM-DDTHH:MM:SS ISO date>
 ---
 
@@ -74,10 +75,12 @@ created: <YYYY-MM-DDTHH:MM:SS ISO date>
 - **Review After**: <each task | each phase | final only>
 - **Fix Loop Trigger**: <severity levels that trigger builder re-work, default: Critical and Important>
 - **Max Retries**: <max fix attempts before escalating to user, default: 3>
-- **Skip Review For**: <comma-separated task IDs that skip review, or "none">
+- **Skip Review For**: <comma-separated task IDs or agent types that skip code review — e.g., "research-codebase, validate-all" or "researcher, validator". Use "none" to review everything.>
 </if>
 
 ## Step by Step Tasks
+
+<each builder task should produce 1-3 files and ~100-300 lines of code. If a task is larger, split it into smaller tasks with clear file boundaries.>
 
 <list step by step tasks as numbered h3 headers>
 
@@ -85,15 +88,15 @@ created: <YYYY-MM-DDTHH:MM:SS ISO date>
 - **Task ID**: <unique-kebab-case-id>
 - **Depends On**: <comma-separated task IDs, or "none">
 - **Description**: <what to do, with specific actions as bullet points>
+- **Files**: <list of files this task creates or modifies — one per line, prefixed with "creates:" or "modifies:". Required for builder tasks. Optional for research/review/validation tasks.>
 - **Tests**: <what tests must be written for this task — specify test file paths, test cases, and expected behaviors. Use "N/A" only for tasks that produce zero testable code (research, docs, config-only).>
-<if mode is delegated or team>
-- **Assigned To**: <for delegated mode: agent display name matching a Team Members entry. For team mode: MUST be the plain Agent Type name — e.g., "builder", "reviewer", "researcher". Do NOT use numbered or qualified labels like "Builder 1", "Security Builder 2", "Reviewer 3". The orchestrator schedules by Agent Type, not by this label.>
-- **Agent Type**: <builder | researcher | reviewer | validator | architect | tester>
-</if>
 <if mode is delegated>
+- **Assigned To**: <agent display name matching a Team Members entry>
+- **Agent Type**: <builder | researcher | reviewer | validator | architect | tester>
 - **Background**: <true if safe to run in parallel with other background tasks, false if must be sequential>
 </if>
 <if mode is team>
+- **Agent Type**: <builder | researcher | reviewer | validator | architect | tester — the orchestrator schedules by Agent Type, not by name>
 - **Parallel**: <true if can run alongside other tasks, false if must be sequential>
 - **Plan Approval**: <true if teammate must submit plan for lead approval before implementing, false otherwise>
 </if>
@@ -117,8 +120,11 @@ created: <YYYY-MM-DDTHH:MM:SS ISO date>
 <if mode is sequential>
 Review your own work: re-read every file you changed, check for bugs, missing edge cases, security issues, and style problems. Fix any issues found before proceeding to validation.
 </if>
-<if mode is delegated or team>
+<if mode is delegated>
 - **Assigned To**: <reviewer agent name>
+- **Agent Type**: reviewer
+</if>
+<if mode is team>
 - **Agent Type**: reviewer
 </if>
 
@@ -126,8 +132,11 @@ Review your own work: re-read every file you changed, check for bugs, missing ed
 - **Task ID**: validate-all
 - **Depends On**: review-all
 - **Description**: Run all validation commands, verify every acceptance criterion is met
-<if mode is delegated or team>
+<if mode is delegated>
 - **Assigned To**: <validator agent name>
+- **Agent Type**: validator
+</if>
+<if mode is team>
 - **Agent Type**: validator
 </if>
 
@@ -139,6 +148,9 @@ Review your own work: re-read every file you changed, check for bugs, missing ed
 
 ## Validation Commands
 <list specific commands to run to validate the work is complete — tests, linters, type checks, curl commands, etc.>
+
+## Cleanup
+<list commands to tear down resources created during the build — stop dev servers, remove temp files, undo global installs. Use "N/A" if nothing to clean up.>
 
 ## Notes
 <optional additional context, considerations, dependencies, or risks>
