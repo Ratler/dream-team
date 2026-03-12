@@ -30,7 +30,7 @@ Use today's date. Example: `specs/2026-02-07-user-auth-api.md`
 2. Read the available agent definitions at `${CLAUDE_PLUGIN_ROOT}/agents/*.md`.
 3. Summarize the agreed plan from the conversation — confirm with the user before writing.
 4. Write the spec, filling in all sections from the brainstorming context.
-5. Set frontmatter `mode: team`.
+5. Set frontmatter `mode: team` and `spec-version: 1`.
 6. Set frontmatter `playwright: true` if the brainstorming decided to use Playwright MCP, otherwise `playwright: false`.
 7. Set frontmatter `frontend-design: true` if the brainstorming discussed frontend/UI work and design direction, otherwise `frontend-design: false`.
 8. If `frontend-design: true`, fill in the `## Design Direction` section with the aesthetic style, stack, component libraries, and design notes from the brainstorming conversation. Auto-suggest component libraries based on the chosen stack if not explicitly discussed.
@@ -38,16 +38,19 @@ Use today's date. Example: `specs/2026-02-07-user-auth-api.md`
 10. Set `plan_approval: true` for high-risk or architectural tasks.
 11. Size tasks at 5-6 per agent role for optimal productivity.
 12. Include Team Configuration and Review Policy sections.
-13. Save to `specs/YYYY-MM-DD-<descriptive-kebab-case>.md` using today's date.
+13. Fill in the `## Cleanup` section with any teardown commands needed (stop servers, remove temp files). Use "N/A" if nothing to clean up.
+14. Save to `specs/YYYY-MM-DD-<descriptive-kebab-case>.md` using today's date.
 
 ## Task Rules
 
-- Every task must have `Assigned To`, `Agent Type`, `Parallel`, and `Plan Approval`
-- **IMPORTANT — "Assigned To" MUST use the plain Agent Type name.** Use `builder`, `reviewer`, `researcher`, `tester`, `validator`, `architect`, `debugger`, or `security-reviewer`. Do NOT use numbered labels like "Builder 1", "Security Builder 2", "Reviewer 3", "Final Reviewer". The orchestrator schedules by **Agent Type**, NOT by "Assigned To" label. Numbered labels cause the orchestrator to spawn a SEPARATE agent for each unique label, which defeats the agent cap and wastes resources. ALL builder tasks get "Assigned To: builder". ALL review tasks get "Assigned To: reviewer". The orchestrator handles parallelism by spawning multiple instances of the same type when needed.
+- Every task must have `Agent Type`, `Parallel`, and `Plan Approval`. Team mode does NOT use `Assigned To` — the orchestrator schedules by Agent Type only.
 - Set `Parallel: true` for tasks that can run alongside others (no shared file edits)
 - Set `Plan Approval: true` for high-risk tasks (architectural decisions, schema changes, security-critical code)
 - Set `Depends On` conservatively — only add real dependencies, let parallelism happen naturally
 - Every builder task must include a **Tests** field listing the test file paths and test cases it must produce. Use "N/A" only for tasks with zero testable code (research, docs, config-only).
+- Every builder task must include a `**Files**` field listing exactly which files it creates or modifies, prefixed with `creates:` or `modifies:`. Review, research, and validation tasks may omit this field.
+- Each builder task should produce 1-3 files and ~100-300 lines of code. If a task would be larger, split it into smaller tasks with clear file boundaries.
+- For parallel builder tasks (`Parallel: true`), verify that their `**Files**` fields do not overlap. If two builders would modify the same file, make one depend on the other.
 - Avoid assigning same-file edits to tasks that can run in parallel
 - Research and architecture tasks should complete before build tasks depend on them
 - **After every builder task that writes code, add a review task** assigned to the reviewer agent. The review task depends on the builder task it reviews.
@@ -68,7 +71,7 @@ Use these defaults unless the brainstorming conversation specified otherwise:
 - **Review After**: each task
 - **Fix Loop Trigger**: Critical and Important
 - **Max Retries**: 3
-- **Skip Review For**: research-only tasks
+- **Skip Review For**: researcher, validator
 
 ## Git
 

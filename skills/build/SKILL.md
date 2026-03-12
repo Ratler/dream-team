@@ -22,16 +22,27 @@ AVAILABLE_AGENTS: `${CLAUDE_PLUGIN_ROOT}/agents/*.md`
 
 - If no `SPEC_PATH` is provided, stop and ask the user to provide it.
 - Read the spec file at SPEC_PATH.
-- Parse the YAML frontmatter to extract `mode`, `complexity`, `type`, `playwright`, and `frontend-design`.
+- Parse the YAML frontmatter to extract `mode`, `complexity`, `type`, `playwright`, `frontend-design`, `spec-version`, and `branch`.
+- If `spec-version` is missing from frontmatter, log a warning ("spec written before spec-version was introduced — consider updating") but proceed normally. This ensures backwards compatibility.
+- If `branch` is present in frontmatter, this is a **resumed build** — see Resuming a Build below.
 - Based on `mode`, follow the corresponding execution strategy below.
 - If `playwright: true`, append the Playwright instructions (see below) to every builder and tester agent dispatch prompt. If `playwright: false` or missing, do NOT mention Playwright to agents.
 - If `frontend-design: true`, read `${CLAUDE_PLUGIN_ROOT}/templates/frontend-design-guidelines.md` and the spec's `## Design Direction` section. Append the Frontend Design Instructions (see below) to every builder agent dispatch prompt. If `frontend-design: false` or missing, do NOT mention frontend design to agents.
-- **Create a feature branch** before starting any work (see Git Workflow below).
+- **Create a feature branch** before starting any work (see Git Workflow below). After creating the branch, write `branch: feat/<spec-name>` into the spec file's frontmatter to mark the build as started.
 - Use TaskCreate to register every task from the spec's `## Step by Step Tasks` section.
 - Use TaskUpdate with `addBlockedBy` to set dependencies per each task's `Depends On` field.
 - Execute tasks according to the mode.
 - After all tasks complete: run `## Validation Commands` and verify `## Acceptance Criteria`.
 - Present a final report.
+
+### Resuming a Build
+
+If the spec's frontmatter contains a `branch` field, this is a resumed build:
+1. Check out the existing branch (do not create a new one).
+2. Use TaskList to find existing tasks from the previous run. If tasks exist, skip re-creating them.
+3. Skip any tasks already marked `completed`.
+4. For `in_progress` tasks: read the task description for partial progress notes, then continue from where the previous build left off.
+5. For `not_started`/`pending` tasks: proceed normally according to the mode.
 
 ## Git Workflow
 
@@ -41,13 +52,15 @@ AVAILABLE_AGENTS: `${CLAUDE_PLUGIN_ROOT}/agents/*.md`
 
 ### Branch
 
-Before executing any tasks, create a feature branch:
-```
-git checkout -b feat/<spec-name-without-date>
-```
-Derive the branch name from the spec filename. For example, `specs/2026-02-07-user-auth-api.md` becomes `feat/user-auth-api`.
-
-If the branch already exists (e.g. resuming a build), check it out instead of creating it.
+Before executing any tasks:
+1. Check if the spec frontmatter contains a `branch` field. If yes, check out that branch — this is a resumed build (see Resuming a Build above).
+2. If no `branch` field, create a new feature branch:
+   ```
+   git checkout -b feat/<spec-name-without-date>
+   ```
+   Derive the branch name from the spec filename. For example, `specs/2026-02-07-user-auth-api.md` becomes `feat/user-auth-api`.
+3. After creating a new branch, write `branch: feat/<spec-name>` into the spec file's YAML frontmatter (before the closing `---`). This marks the spec as "build started" so it can be resumed if interrupted.
+4. If the branch already exists but there's no `branch` field in frontmatter, check it out and add the field.
 
 ### Commits
 

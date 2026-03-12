@@ -84,7 +84,8 @@ claude plugin install dream-team@dream-team-marketplace
 | **Team support**    | Parallel Claude instances via experimental agent teams    |
 | **Playwright**      | First-class integration (opt-in per spec)                 |
 | **Frontend design** | Aesthetic direction, anti-generic rules, guidelines       |
-| **Validation**      | Hook-enforced (preflight checks, can't skip)              |
+| **Validation**      | Structural spec checks, dep graph, preflight hooks        |
+| **Build resume**    | Interrupted builds resume from last completed task        |
 
 
 ## How It Works
@@ -143,8 +144,8 @@ Six JavaScript hooks run at key points in the workflow:
   per-project audit trails. Logging only — never blocks.
 - **Spec exists** (Stop hook) -- After a spec skill finishes, validates that a spec file was actually written to
   `specs/`.
-- **Spec sections** (Stop hook) -- Validates that the spec contains all required sections for its declared execution
-  mode.
+- **Spec sections** (Stop hook) -- Validates required sections for the declared mode, plus structural checks:
+  unresolved `<if>` tags, missing Tests fields, dangling or circular dependencies, and invalid Skip Review For entries.
 - **Build complete** (Stop hook) -- After a build skill finishes, checks that all tasks reached the `completed` state.
 
 ## Agents
