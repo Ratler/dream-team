@@ -1,5 +1,42 @@
 # Release Notes
 
+## 0.7.0
+
+### Spec Format Hardening
+
+Structural improvements to the spec file format and validation, addressing failure modes discovered in real-world builds.
+
+**Validation hook gains structural checks** — the spec sections hook now catches five categories of spec defects before
+the build starts, rather than failing at runtime:
+- Unresolved `<if>` / `</if>` template tags that survived into the generated spec
+- Tasks missing the required `**Tests**` field
+- Dangling dependency references (task depends on a non-existent task ID)
+- Circular dependencies that would hang the build
+- Invalid `Skip Review For` entries (must be valid task IDs or agent types, not prose like "review tasks")
+
+The `spec-version` field is checked with a soft warning (no block) for backwards compatibility with older specs.
+
+**Per-task file ownership** — the spec template now includes a `**Files**` field on every builder task listing exactly
+which files it creates or modifies (`creates:` / `modifies:` prefixes). The delegated and team spec skills enforce
+non-overlap: parallel/background builder tasks with overlapping files must be made sequential. This prevents merge
+conflicts that previously only surfaced at build time.
+
+**Task sizing guidance** — all three spec skills now include sizing rules: each builder task should produce 1-3 files
+and ~100-300 lines of code. Oversized tasks that exhaust agent context windows should be split.
+
+**Build resume support** — the build skill now writes a `branch` field into the spec's frontmatter when it creates the
+feature branch. On subsequent runs, it detects the field, checks out the existing branch, and resumes from the first
+incomplete task instead of starting over.
+
+**Other changes:**
+- `spec-version: 1` added to frontmatter template for future compatibility
+- `## Cleanup` section added to the spec template for teardown commands
+- Team mode task format drops the redundant `Assigned To` field (only `Agent Type` remains)
+- `Skip Review For` now requires comma-separated task IDs or agent types instead of freeform prose
+- 12 new validation tests (98 total across 8 test files)
+
+---
+
 ## 0.6.1
 
 ### Worktree and Git Workflow Fixes
