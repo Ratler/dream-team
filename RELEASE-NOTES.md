@@ -1,5 +1,24 @@
 # Release Notes
 
+## 0.7.1
+
+### Ambiguity Elimination
+
+Addresses build divergence discovered through a 5-build consistency test. Builds from the same spec were producing functionally identical but structurally different output (~67% line-level divergence) due to underspecified details in the spec.
+
+**Spec-writing skills gain ambiguity elimination guidance** — all three spec skills (sequential, delegated, team) now include an "Eliminating Ambiguity" section that instructs spec authors to use exact values instead of descriptive language:
+- Exact hex colors instead of "red-tinted" or "dark background"
+- Exact string templates instead of "display the score and author"
+- Exact element types, class names, and DOM patterns
+- Exact API units, timeout values, and implementation patterns
+- Explicit quote style conventions
+
+**Build skill enforces literal spec adherence** — sequential mode now instructs the builder to treat the spec as a blueprint, using exact values verbatim. Delegated mode's agent dispatch template includes a "Literal spec adherence" block that every dispatched agent sees.
+
+**Measured impact**: after rewriting a test spec with exact values, 5 parallel builds produced byte-identical output (after whitespace normalization). Previous divergence on colors, units, element types, string formats, and implementation patterns was completely eliminated.
+
+---
+
 ## 0.7.0
 
 ### Spec Format Hardening
