@@ -86,12 +86,15 @@ After all acceptance criteria pass, do NOT merge or push. Report the branch name
 
 You execute tasks directly — no sub-agents.
 
+**Follow the spec literally.** When the spec provides exact values (hex colors, string templates, element types, class names, timeout values, API parameters, units), use those exact values. Do not substitute your own preferences — the spec author chose specific values to ensure reproducible builds. If the spec says `#e57373`, use `#e57373` — not a "similar" red. If the spec says `createElement("div")`, use a div — not a p or span. If the spec says `timeout: 10000`, use 10000 — not 5000. Treat the spec as a blueprint, not a suggestion.
+
 1. Create the feature branch (see Git Workflow).
 2. Create all tasks via TaskCreate. Set dependencies so each task blocks on the previous.
 3. If `frontend-design: true`, read `${CLAUDE_PLUGIN_ROOT}/templates/frontend-design-guidelines.md`. When executing tasks that involve frontend/UI code, apply these guidelines along with the spec's `## Design Direction` section.
 4. For each task in order:
    - Mark it `in_progress` via TaskUpdate.
    - Execute the task yourself — read files, write code, run commands.
+   - When the spec gives exact values, use them verbatim. When the spec is silent on a detail, make a reasonable choice but keep it minimal.
    - If `playwright: true` and the task involves UI changes, verify visually using Playwright MCP tools (navigate, screenshot, interact, check console). If Playwright tools are not available, skip and note it.
    - Mark it `completed` via TaskUpdate.
 5. **After completing all builder tasks and before the final code review task**: run a security review. Read the `security-reviewer` agent definition from AVAILABLE_AGENTS to load the security checklist. List all files changed on the feature branch (`git diff --name-only main...HEAD`). Read every changed file and work through the 7-category security checklist systematically. Report findings using Critical/Important/Minor severity. Fix any Critical or Important issues before proceeding to the code review task.
@@ -101,7 +104,7 @@ You execute tasks directly — no sub-agents.
 
 ## Mode: Delegated
 
-You are the orchestrator. You NEVER write code directly — you dispatch agents.
+You are the orchestrator. You NEVER write code directly — you dispatch agents. When dispatching builder agents, emphasize that they must follow the spec literally — exact values specified in the task description (hex colors, string formats, element types, timeouts, units) must be used verbatim, not creatively interpreted.
 
 1. Create the feature branch (see Git Workflow).
 2. Read agent definitions from AVAILABLE_AGENTS to understand each agent's capabilities.
@@ -153,6 +156,8 @@ You are a <agent-type> agent.
 
 **Your Task**: <task name>
 **Task ID**: <id>
+
+**IMPORTANT — Literal spec adherence**: When the task description provides exact values (hex colors, string templates, element types, class names, timeout values, API parameters, units), use those exact values. Do not substitute your own preferences. Treat the spec as a blueprint, not a suggestion.
 
 **Description**:
 <full task description from the spec, including all bullet points>
