@@ -39,10 +39,43 @@ AVAILABLE_AGENTS: `${CLAUDE_PLUGIN_ROOT}/agents/*.md`
 
 If the spec's frontmatter contains a `branch` field, this is a resumed build:
 1. Check out the existing branch (do not create a new one).
-2. Use TaskList to find existing tasks from the previous run. If tasks exist, skip re-creating them.
-3. Skip any tasks already marked `completed`.
-4. For `in_progress` tasks: read the task description for partial progress notes, then continue from where the previous build left off.
-5. For `not_started`/`pending` tasks: proceed normally according to the mode.
+2. Derive the state directory path from the spec filename (strip date prefix and `.md` extension, e.g., `specs/2026-03-14-my-feature.md` → `specs/.build-state/my-feature`).
+3. Read all task state files from the state directory (each `<task-id>.json` file).
+4. Use TaskCreate to re-create tasks, setting their status from the state files:
+   - `"completed"` tasks: create with status completed. Set the task description to the saved `description` field from the state file (this preserves agent reports and context).
+   - `"in_progress"` tasks: create with status in_progress. Set the description to the saved description (if any) plus a note: `"RESUMED: This task was interrupted in a previous session. Check git log and changed files to determine what was completed before continuing."`
+   - `"pending"` tasks: create normally.
+5. Set dependencies via TaskUpdate `addBlockedBy` per each task's `dependsOn` field from the state files.
+6. Skip dispatching/executing completed tasks.
+7. For in_progress tasks: assess what was done (check git log, read files on disk) and continue from there rather than restarting from scratch.
+8. For pending tasks: proceed normally according to the mode.
+
+If the state directory does not exist but `branch` does, fall back to git-history-based resume: check out the branch, inspect commits with `git log`, and infer progress from what files exist and what tests pass.
+
+### Build State
+
+Build state is persisted to disk so builds can resume from a fresh session. State directory: `specs/.build-state/<spec-name>/` (derived by stripping the date prefix and `.md` extension from the spec filename).
+
+#### On Build Start (new build, not resume)
+
+After creating the feature branch and before creating tasks:
+1. Derive the state directory path from the spec filename.
+2. Create the directory and write `_meta.json` with: `specFile` (spec path), `branch` (feature branch name), `mode` (from frontmatter), `startedAt` (current ISO timestamp), `lastUpdated` (same as startedAt), `compactions` (0).
+3. For each task in the spec's `## Step by Step Tasks` section, write a `<task-id>.json` file with: `name` (task name), `status` `"pending"`, `agentType` (from spec Agent Type field, or `"sequential"` for sequential mode), `startedAt` null, `completedAt` null, `lastUpdated` (current ISO timestamp), `description` null, `commitSha` null, `filesChanged` [], `dependsOn` (array of task IDs from the Depends On field).
+
+#### Before Each Task
+
+Before starting or dispatching each task, update its state file:
+- Set `status` to `"in_progress"`
+- Set `startedAt` to the current ISO timestamp
+
+#### On Task Completion
+
+The TaskCompleted hook automatically updates the task state file to `"completed"` with the agent's description, timestamp, and commit info. You do NOT need to update the state file after task completion — the hook handles it.
+
+#### After Commits
+
+After merging a worktree branch or committing reviewed code, update the task's state file with `commitSha` set to the commit SHA and `filesChanged` set to the list of files in that commit.
 
 ## Git Workflow
 

@@ -2,15 +2,14 @@
 'use strict';
 
 /**
- * TaskCompleted hook: Logs all task completions to a per-project audit log.
+ * TaskCompleted hook: Logs task completions and persists build state.
  *
- * Reads task data from stdin (provided by the TaskCompleted hook event).
+ * Two responsibilities:
+ * 1. Audit logging — appends JSON line to ~/.claude/dream-team/logs/<cwd>.jsonl
+ * 2. Build state — updates per-task state file in specs/.build-state/<spec>/
+ *
  * Uses native agent_type field (since Claude Code 2.1.69) with fallback
  * to [agent-type: X] tag in task description for older versions.
- *
- * Logging:
- *   - Appends a JSON line to ~/.claude/dream-team/logs/<sanitized-cwd>.jsonl
- *   - Override log directory with DREAM_TEAM_LOG_DIR env var (for testing)
  *
  * Exit codes:
  *   0 = always (logging only, never blocks)
@@ -18,6 +17,9 @@
 
 const fs = require('fs');
 const path = require('path');
+const { findActiveStateDir, readTask, writeTask, readAllTasks } = require(
+  path.join(__dirname, '..', 'lib', 'build-state')
+);
 
 /**
  * Resolve agent type from hook input.
@@ -82,6 +84,79 @@ function writeLogEntry(input, agentType) {
   }
 }
 
+/**
+ * Persist completed task state to the build-state directory.
+ * Finds the active build, matches the task by ID or subject, and updates it.
+ */
+function updateBuildState(input, agentType) {
+  try {
+    const cwd = input.cwd;
+    if (!cwd) return;
+
+    const stateDir = findActiveStateDir(cwd);
+    if (!stateDir) return;
+
+    // Try to match by task_id first, then by task_subject against task names
+    const taskId = input.task_id || '';
+    let matchedId = null;
+
+    if (taskId) {
+      const existing = readTask(stateDir, taskId);
+      if (existing) {
+        matchedId = taskId;
+      } else {
+        // Normalize: try kebab-case version of the task_id
+        const kebab = taskId.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+        const existing2 = readTask(stateDir, kebab);
+        if (existing2) matchedId = kebab;
+      }
+    }
+
+    // Fallback: match by task_subject against task name fields
+    if (!matchedId && input.task_subject) {
+      const allTasks = readAllTasks(stateDir);
+      for (const [id, task] of Object.entries(allTasks)) {
+        if (task.name === input.task_subject) {
+          matchedId = id;
+          break;
+        }
+      }
+    }
+
+    if (!matchedId) {
+      console.error(`[dream-team] Build state: no matching task for id="${taskId}" subject="${input.task_subject || ''}"`);
+      return;
+    }
+
+    const taskData = readTask(stateDir, matchedId);
+    if (!taskData) return;
+
+    taskData.status = 'completed';
+    taskData.completedAt = new Date().toISOString();
+    taskData.agentType = agentType;
+    taskData.description = input.task_description || null;
+
+    // Extract commit SHA from description
+    const desc = input.task_description || '';
+    const commitMatch = desc.match(/commit\s+([a-f0-9]{7,40})/i);
+    if (commitMatch) taskData.commitSha = commitMatch[1];
+
+    // Extract files changed from description (lines starting with "- " after Files heading)
+    const filesMatch = desc.match(/files?\s*(?:changed|modified|created)?:?\s*\n((?:\s*-\s+.+\n?)+)/i);
+    if (filesMatch) {
+      taskData.filesChanged = filesMatch[1]
+        .split('\n')
+        .map(l => l.replace(/^\s*-\s+/, '').trim())
+        .filter(Boolean);
+    }
+
+    writeTask(stateDir, matchedId, taskData);
+    console.error(`[dream-team] Build state: marked "${matchedId}" as completed`);
+  } catch (err) {
+    console.error(`[dream-team] Build state update failed (non-fatal): ${err.message}`);
+  }
+}
+
 function main() {
   try {
     let input = {};
@@ -102,6 +177,9 @@ function main() {
 
     // Log the completion (all agent types)
     writeLogEntry(input, agentType);
+
+    // Persist to build state (if active build exists)
+    updateBuildState(input, agentType);
 
     process.exit(0);
   } catch (err) {

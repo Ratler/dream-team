@@ -33,9 +33,11 @@ This is a Claude Code plugin, not a Node.js application. There is no `package.js
 - **`commands/*.md`** — Slash-command autocomplete entries. Thin wrappers that read and delegate to the matching skill via `${CLAUDE_PLUGIN_ROOT}/skills/<name>/SKILL.md`. Do NOT set `disable-model-invocation: true` on commands that delegate to skills (breaks the Skill tool chain).
 - **`skills/*/SKILL.md`** — Actual skill logic. YAML frontmatter defines name, description, argument hints, and Stop hooks. The `allowed-tools` frontmatter field controls tool access (`disallowed-tools` is not a valid field).
 - **`agents/*.md`** — Agent definitions with model, color, and behavioral instructions. Models: builder=opus, researcher=sonnet, architect=opus, reviewer=sonnet, tester=sonnet, validator=haiku, debugger=opus. Builder and debugger agents use `isolation: "worktree"` for git worktree isolation in delegated/team modes. Builder, reviewer, and architect agents use `memory: project` for persistent cross-session knowledge. All agents include `[agent-type: X]` in their report format and write reports to the task description via `TaskUpdate(description: ...)`.
-- **`hooks/*.js`** — JavaScript hooks (Node.js, no external deps). `hooks.json` registers SessionStart, PreToolUse, and TaskCompleted hooks. Stop hooks are declared in skill frontmatter under the `hooks:` key.
+- **`hooks/*.js`** — JavaScript hooks (Node.js, no external deps). `hooks.json` registers SessionStart, PreToolUse, TaskCompleted, and PostCompact hooks. Stop hooks are declared in skill frontmatter under the `hooks:` key.
+- **`lib/build-state.js`** — State persistence library. Functions for creating, reading, and updating per-task state files in `specs/.build-state/<spec-name>/`. Used by hooks and the progress dashboard.
+- **`bin/progress.js`** — CLI progress dashboard. Run `node bin/progress.js <spec-path>` from any terminal to see build progress without needing a Claude session.
 - **`templates/spec-template.md`** — Shared spec template with conditional sections per execution mode and YAML frontmatter.
-- **`specs/`** — Generated spec files (date-prefixed: `YYYY-MM-DD-<name>.md`).
+- **`specs/`** — Generated spec files (date-prefixed: `YYYY-MM-DD-<name>.md`). Build state is persisted under `specs/.build-state/<spec-name>/` with one JSON file per task plus `_meta.json` for build metadata.
 - **`.claude-plugin/plugin.json`** — Plugin manifest. Omit empty string fields (e.g., `homepage: ""` fails URL validation).
 - **`.claude-plugin/marketplace.json`** — Local marketplace definition.
 
@@ -44,7 +46,8 @@ This is a Claude Code plugin, not a Node.js application. There is no `package.js
 Hooks are plain Node.js scripts that read stdin and write JSON to stdout:
 - **SessionStart** (`session_start.js`): Async hook. Outputs `{hookSpecificOutput: {hookEventName, additionalContext}}`. Injects usage guide into session context.
 - **Stop hooks** (`validate_spec_exists.js`, `validate_build_complete.js`, `validate_spec_sections.js`): Exit 0 + `{"result":"continue"}` to allow, exit 1 + `{"result":"block","reason":"..."}` to block. Stop hooks in skill frontmatter appear to be working as of Claude Code 2.1.49 (previously broken upstream — claude-code#19225). All Stop hooks log `last_assistant_message` to stderr when available (visible in `claude --debug`).
-- **TaskCompleted** (`validate_task_completed.js`): Logging only — always exits 0. Logs all task completions as JSON lines to `~/.claude/dream-team/logs/<sanitized-cwd>.jsonl`. Uses `DREAM_TEAM_LOG_DIR` env var for test override.
+- **TaskCompleted** (`validate_task_completed.js`): Always exits 0. Two responsibilities: (1) appends audit log entry to `~/.claude/dream-team/logs/<sanitized-cwd>.jsonl`, (2) persists completed task state to `specs/.build-state/<spec-name>/<task-id>.json` when an active build exists. Uses `DREAM_TEAM_LOG_DIR` env var for test override.
+- **PostCompact** (`postcompact_checkpoint.js`): Always exits 0. Increments the `compactions` counter in `specs/.build-state/<spec-name>/_meta.json` when an active build exists. Tracks context compaction frequency as a signal for long-running or stalled builds.
 
 ### Skill Pipeline
 
