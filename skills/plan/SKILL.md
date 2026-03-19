@@ -23,7 +23,22 @@ This context lets you ask sharper questions. Do not skip it.
 
 ### Phase 2 — Explore the Idea
 
-Now start a dialogue. Ask **one question per message** — never bundle questions together. Where it makes sense, offer 2-4 concrete choices rather than open-ended prompts (choices are faster to answer and surface assumptions).
+Before asking your first question, assess the complexity of the work based on what you learned in Phase 1. This calibrates how deep you go:
+- **Small/simple** (config change, minor tweak, isolated fix): Ask a few pointed questions hitting the key decisions. Get to Phase 3 quickly.
+- **Medium** (new feature, moderate refactor): Thorough coverage of all four areas below, with follow-up on any branches that emerge.
+- **Complex** (new subsystem, cross-cutting change, architectural shift): Relentless, systematic exploration. Walk every branch of the decision tree. Resolve dependency chains between decisions. Do not move on until every branch is addressed.
+
+Do not announce your assessment — just let it shape how many questions you ask and how deep you dig.
+
+**Be opinionated, not neutral.** For every question you ask:
+1. First, investigate the codebase for evidence that answers it (read files, check patterns, look at existing conventions).
+2. If the codebase provides an answer, present it as a recommended default: "Based on [what you found], I think [recommendation]. Does that match your intent, or is there a different angle?"
+3. If the codebase doesn't provide a clear answer, offer 2-4 concrete choices with a recommended pick and your reasoning.
+4. The user confirms, adjusts, or overrides. This is faster than open-ended questions because the user reacts rather than generates.
+
+**Walk the decision tree.** When an answer creates downstream decisions, follow those branches immediately — don't leave them dangling to circle back to later. Resolve dependency chains sequentially: if choosing X implies questions A and B, ask A and B before moving to the next top-level area.
+
+**One question per turn by default.** When questions are tightly coupled — one answer directly implies a follow-up — bundle them in the same message. Otherwise, stick to one question per turn.
 
 Work through these areas, in whatever order feels natural:
 - **What and why** — what does the user actually want? What problem does it solve?
@@ -31,7 +46,7 @@ Work through these areas, in whatever order feels natural:
 - **Constraints** — performance targets, compatibility requirements, external dependencies
 - **Success criteria** — how will we know it works? What does "done" look like?
 
-Keep going until the shape of the work is clear. If the user's answers reveal new complexity, follow that thread before moving on.
+Keep going until every branch of the decision tree is resolved. If the user's answers reveal new complexity, follow that thread before moving on. If the user says "move on" or "that's enough," respect it and advance to Phase 3.
 
 ### Phase 3 — Shape the Approach
 
@@ -93,8 +108,8 @@ Do NOT write a spec file. Do NOT create any files. The spec-writing skills will 
 ## Ground Rules
 
 - **Conversation only** — no files, no specs, no code. Your output is dialogue.
-- **One question per turn** — resist the urge to ask three things at once.
-- **Choices over open-ends** — when you can offer concrete options, do it. Faster and more precise.
+- **One question per turn, unless tightly coupled** — default to one question per message. Exception: when one answer directly implies a follow-up, bundle them together.
+- **Opinionated over neutral** — investigate the codebase before asking. Present a recommended answer as the default; let the user confirm or override. Only fall back to open-ended questions when the codebase gives no signal.
 - **Cut ruthlessly** — if a feature is not essential to the core goal, push back on it. YAGNI.
 - **Stay flexible** — revisit earlier decisions when new information changes the picture.
 - **Propose before assuming** — always present options and wait for a decision. Never silently pick an approach.
