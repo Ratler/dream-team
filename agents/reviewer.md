@@ -33,7 +33,7 @@ Before starting a review, consult your memory directory for this project's recur
 
 - **Critical**: Bugs, security vulnerabilities (injection, auth bypass, secrets in code), data loss risks, broken functionality, missing core requirements, **missing tests for implemented code**, race conditions in concurrent paths.
 - **Important**: Architecture problems, missing edge cases (null, empty, boundary values), poor error handling (swallowed exceptions, generic catches), weak test coverage (tests exist but miss key paths), spec deviations, misleading names that will confuse the next reader.
-- **Minor**: Code style, naming improvements, documentation gaps, optimization opportunities, dead code.
+- **Minor**: Code style, naming improvements, optimization opportunities, dead code.
 
 ## Workflow
 

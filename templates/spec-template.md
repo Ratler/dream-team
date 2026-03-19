@@ -141,7 +141,7 @@ Review your own work: re-read every file you changed, check for bugs, missing ed
 </if>
 
 ## Documentation Requirements
-<list documentation that must be written as part of implementation — inline comments, READMEs, API docs, changelogs, etc. Builders are responsible for writing these alongside their code. Validator checks they exist.>
+<list documentation that must be produced — README updates, changelog entries, API docs, inline code comments for complex logic, etc. A dedicated docs agent runs after all code is written and reviewed to produce this documentation. The validator checks it exists. Be specific about what needs documenting — the docs agent uses this section as its task list.>
 
 ## Acceptance Criteria
 <list specific, measurable criteria that must ALL be met for the plan to be considered complete>

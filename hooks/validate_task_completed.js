@@ -4,9 +4,10 @@
 /**
  * TaskCompleted hook: Logs task completions and persists build state.
  *
- * Two responsibilities:
+ * Three responsibilities:
  * 1. Audit logging — appends JSON line to ~/.claude/dream-team/logs/<cwd>.jsonl
  * 2. Build state — updates per-task state file in specs/.build-state/<spec>/
+ * 3. Markdown formatting — runs markdown-table-formatter on .md files if installed
  *
  * Uses native agent_type field (since Claude Code 2.1.69) with fallback
  * to [agent-type: X] tag in task description for older versions.
@@ -17,6 +18,7 @@
 
 const fs = require('fs');
 const path = require('path');
+const { execSync } = require('child_process');
 const { findActiveStateDir, readTask, writeTask, readAllTasks } = require(
   path.join(__dirname, '..', 'lib', 'build-state')
 );
@@ -157,6 +159,77 @@ function updateBuildState(input, agentType) {
   }
 }
 
+/**
+ * Extract .md file paths from task description.
+ * Looks for file paths ending in .md in "Files changed" or similar sections.
+ */
+function extractMdFiles(description) {
+  if (!description) return [];
+  const mdFiles = [];
+  // Match lines that contain file paths ending in .md
+  const lines = description.split('\n');
+  for (const line of lines) {
+    // Match patterns like "- path/to/file.md" or "- path/to/file.md — description"
+    const match = line.match(/^\s*-\s+([^\s—–-]+\.md)/);
+    if (match) {
+      mdFiles.push(match[1]);
+    }
+  }
+  return mdFiles;
+}
+
+/**
+ * Run markdown-table-formatter on .md files changed during a task.
+ * Noop if the formatter is not installed or no .md files were changed.
+ */
+function formatMarkdownTables(input) {
+  try {
+    const description = input.task_description || '';
+    const mdFiles = extractMdFiles(description);
+    if (mdFiles.length === 0) return;
+
+    // Check if markdown-table-formatter is installed
+    try {
+      execSync('which markdown-table-formatter', { stdio: 'pipe' });
+    } catch {
+      console.error('[dream-team] markdown-table-formatter not installed, skipping table formatting');
+      return;
+    }
+
+    // Validate and format each .md file
+    const formatted = [];
+    for (const file of mdFiles) {
+      try {
+        // Sanitize: only allow safe file path characters
+        if (!/^[a-zA-Z0-9_./-]+$/.test(file)) {
+          console.error(`[dream-team] Skipping file with unsafe characters: ${file}`);
+          continue;
+        }
+        // Only format files that exist
+        if (!fs.existsSync(file)) continue;
+        execSync(`markdown-table-formatter ${file}`, { stdio: 'pipe' });
+        formatted.push(file);
+      } catch (err) {
+        console.error(`[dream-team] Failed to format ${file}: ${err.message}`);
+      }
+    }
+
+    // Commit formatted files if any were changed
+    if (formatted.length > 0) {
+      try {
+        const safeFiles = formatted.map(f => `"${f}"`).join(' ');
+        execSync(`git add ${safeFiles} && git commit -m "style: format markdown tables"`, { stdio: 'pipe' });
+        console.error(`[dream-team] Formatted markdown tables in: ${formatted.join(', ')}`);
+      } catch {
+        // No changes after formatting, or git error — not fatal
+        console.error('[dream-team] No formatting changes to commit (tables already formatted)');
+      }
+    }
+  } catch (err) {
+    console.error(`[dream-team] Markdown formatting failed (non-fatal): ${err.message}`);
+  }
+}
+
 function main() {
   try {
     let input = {};
@@ -180,6 +253,9 @@ function main() {
 
     // Persist to build state (if active build exists)
     updateBuildState(input, agentType);
+
+    // Format markdown tables in changed .md files (if formatter is installed)
+    formatMarkdownTables(input);
 
     process.exit(0);
   } catch (err) {
