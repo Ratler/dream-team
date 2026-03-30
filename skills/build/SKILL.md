@@ -63,19 +63,11 @@ After creating the feature branch and before creating tasks:
 2. Create the directory and write `_meta.json` with: `specFile` (spec path), `branch` (feature branch name), `mode` (from frontmatter), `startedAt` (current ISO timestamp), `lastUpdated` (same as startedAt), `compactions` (0).
 3. For each task in the spec's `## Step by Step Tasks` section, write a `<task-id>.json` file with: `name` (task name), `status` `"pending"`, `agentType` (from spec Agent Type field, or `"sequential"` for sequential mode), `startedAt` null, `completedAt` null, `lastUpdated` (current ISO timestamp), `description` null, `commitSha` null, `filesChanged` [], `dependsOn` (array of task IDs from the Depends On field).
 
-#### Before Each Task
-
-Before starting or dispatching each task, update its state file:
-- Set `status` to `"in_progress"`
-- Set `startedAt` to the current ISO timestamp
-
 #### On Task Completion
 
-The TaskCompleted hook automatically updates the task state file to `"completed"` with the agent's description, timestamp, and commit info. You do NOT need to update the state file after task completion — the hook handles it.
+The TaskCompleted hook automatically updates the task state file to `"completed"` with the agent's description, timestamp, and commit info. You do NOT need to manually update state files for task status transitions — the hook handles it.
 
-#### After Commits
-
-After merging a worktree branch or committing reviewed code, update the task's state file with `commitSha` set to the commit SHA and `filesChanged` set to the list of files in that commit.
+After committing code, update the completed task's state file: set `commitSha` to the commit SHA and `filesChanged` to the list of files in that commit.
 
 ## Git Workflow
 
@@ -147,9 +139,10 @@ You are the orchestrator. You NEVER write code directly — you dispatch agents.
 5. For each unblocked task:
    - If `Background: true` and no dependency conflicts, dispatch with `run_in_background: true`.
    - Dispatch the assigned agent via `Task(subagent_type: "<agent-type>", model: "<model>", ...)`.
-   - **IMPORTANT: Always pass the `model` parameter** matching the agent definition. Read each agent's `model` field from their definition file. Do NOT rely on the default — if omitted, subagents inherit the parent model. The correct models are: builder=opus, researcher=sonnet, reviewer=sonnet, tester=sonnet, validator=haiku, architect=opus, debugger=opus, security-reviewer=opus, docs=sonnet.
-   - **IMPORTANT: For builder and debugger agents, always pass `isolation: "worktree"`** so each agent works in an isolated git worktree. This prevents concurrent builders from conflicting. Do NOT pass `isolation` for read-only agents or the docs agent (reviewer, researcher, validator, architect, security-reviewer, tester, docs) — they don't need it.
-   - **IMPORTANT: Never reuse builder or debugger agents across tasks.** Always spawn a fresh agent for each builder/debugger task. Worktree isolation only applies at spawn time — reusing an agent via resume sends it back to the main directory with no isolation. Read-only agents (reviewer, researcher, etc.) CAN be reused since they don't need worktrees.
+   - **Agent dispatch rules:**
+     - Always pass `model` matching the agent definition: builder=opus, researcher=sonnet, reviewer=sonnet, tester=sonnet, validator=haiku, architect=opus, debugger=opus, security-reviewer=opus, docs=sonnet.
+     - For builder/debugger: always pass `isolation: "worktree"` and always spawn fresh (never reuse — worktrees are cleaned up after completion).
+     - For read-only agents (reviewer, researcher, validator, architect, security-reviewer, tester, docs): no isolation needed, CAN be reused.
    - Provide the FULL task description, relevant file paths, and acceptance criteria in the prompt. Do not tell the agent to read the spec — give it everything.
 6. **MANDATORY: After every builder task that writes code, dispatch a reviewer agent.** Do NOT skip this step. Do NOT mark the builder task as completed until the reviewer has approved it.
    - Dispatch a `reviewer` agent (model: sonnet) with the task spec, files changed, and a summary of what the builder did.
@@ -261,7 +254,7 @@ You are the orchestrator of a dynamic agent team. You NEVER write code directly 
 3. Read agent definitions from AVAILABLE_AGENTS.
 4. Read `## Team Configuration` for `Display Mode`, `Coordinate Only`, `Max Active Agents` (default 6), and `Rotation After` (default 3).
 5. Create all tasks via TaskCreate. Set dependencies per spec.
-6. **IMPORTANT — Agent count validation:** Count the number of distinct **Agent Type** values across all tasks (e.g., builder, reviewer, researcher, tester, validator). This is the number of ROLES, NOT the number of agents to spawn. The total concurrent agents at any time MUST NOT exceed `Max Active Agents`. If the spec contains "Assigned To" labels with numbered suffixes (e.g., "Builder 1", "Builder 2", "Reviewer 3") — **IGNORE THE NUMBERS.** These are cosmetic grouping hints, NOT separate agents. You schedule by **Agent Type**, not by "Assigned To" label. See the scheduling loop below.
+6. **Agent count validation:** Count distinct **Agent Type** values across all tasks — this is the number of ROLES, not agents to spawn. Total concurrent agents MUST NOT exceed `Max Active Agents`. Ignore "Assigned To" labels and numbered suffixes — they are cosmetic. Schedule by **Agent Type** only.
 7. Ask the user: "This build has X tasks across Y distinct agent types (list them). Max concurrent agents is set to N. OK to proceed, or would you like to adjust?" Wait for confirmation before spawning any agents.
 8. If `Coordinate Only: true`, enable delegate mode (Shift+Tab) so you only coordinate.
 
@@ -271,49 +264,29 @@ You are the orchestrator of a dynamic agent team. You NEVER write code directly 
 
 ### Dynamic Slot Management
 
-> **IMPORTANT — HOW AGENT MATCHING WORKS:** The scheduling loop matches tasks to agents by **Agent Type** (builder, reviewer, researcher, tester, validator, architect, debugger, security-reviewer). It does NOT match by "Assigned To" label. The "Assigned To" field in specs is a COSMETIC HINT for human readers — it has NO effect on scheduling. If a spec says "Assigned To: Security Builder 1" with Agent Type: builder, and another task says "Assigned To: Builder 5" with Agent Type: builder, those are BOTH just `builder` tasks and can be handled by THE SAME agent instance. NEVER create a separate agent instance for each unique "Assigned To" label.
-
-10. **All agent slots are equal.** There are no reserved slots. You fill slots dynamically based on what unblocked tasks need doing right now.
+10. **All agent slots are equal.** No reserved slots. Fill dynamically based on unblocked tasks.
 
 11. **Scheduling loop** — repeat until all tasks are complete:
-    a. List all unblocked tasks (no pending dependencies).
-    b. Sort them: review tasks first, then all other tasks.
-    c. For each unblocked task, determine how to dispatch it:
-       - **Builder or debugger tasks → ALWAYS spawn fresh**: Spawn a new agent for every builder/debugger task. NEVER reuse a builder/debugger via SendMessage. Retire the previous instance (shut it down) before spawning fresh if a slot is needed. **Note:** Team mode teammates do NOT support `isolation: "worktree"` — all teammates work in the main directory. To prevent conflicts, commit each builder's changes immediately after review approval (see Commit After Completion) and design specs with non-overlapping file boundaries between parallel builders.
-       - **Read-only agent tasks and docs (reviewer, researcher, validator, architect, security-reviewer, tester, docs) → reuse if idle**: Check if an idle agent of the same **Agent Type** exists and is under the rotation limit. If YES, send the task via `SendMessage`. If NO, spawn a new one if a slot is free. It does NOT matter if the idle agent's previous task had a different "Assigned To" label — what matters is the **Agent Type** matches.
-       - When spawning any agent, specify the model matching the agent type: builder=opus, researcher=sonnet, reviewer=sonnet, tester=sonnet, validator=haiku, architect=opus, debugger=opus, security-reviewer=opus, docs=sonnet. Include full task text, file paths, and acceptance criteria in the spawn prompt. **NOTE**: If the agent teams feature does not support per-agent model selection, all agents will use the session's default model.
-       - **NO free slot → wait**: Monitor active agents. When one completes and frees a slot, return to step (a).
-    d. When an agent completes a task and no more unblocked tasks need its **Agent Type**, the slot is freed. If more tasks of that type are pending but blocked, the slot is also freed (an agent will be respawned when those tasks unblock).
-    e. **HARD CAP: NEVER exceed `Max Active Agents` concurrent agents.** If you find yourself about to spawn an agent that would exceed the cap, STOP and wait for a slot to free up first. Count your active agents before every spawn. If active agents >= `Max Active Agents`, you MUST wait.
+    a. List all unblocked tasks. Sort: review tasks first, then others.
+    b. For each unblocked task:
+       - **Builder/debugger → spawn fresh**: Never reuse via SendMessage. Team mode has no worktree isolation — commit after each builder completes (see Commit After Completion) and ensure parallel builders touch different files.
+       - **Read-only agents + docs → reuse if idle**: Same **Agent Type** match (ignore "Assigned To" labels). If no idle agent, spawn new if slot is free.
+       - Pass `model` matching agent type (builder=opus, researcher=sonnet, reviewer=sonnet, tester=sonnet, validator=haiku, architect=opus, debugger=opus, security-reviewer=opus, docs=sonnet). Include full task text, file paths, and acceptance criteria.
+       - **No free slot → wait** for an agent to complete, then return to (a).
+    c. Free slots when agents complete and no unblocked tasks need their type.
+    d. **HARD CAP: Never exceed `Max Active Agents`.** Count active agents before every spawn.
 
 ### Rotation Rules
 
-12. **Each agent instance handles at most `Rotation After` tasks** (default 3). Track the task count per agent instance.
-    - After an agent completes its Nth task (where N = `Rotation After`), **retire it** — do not send it further messages.
-    - If that **Agent Type** has remaining tasks, spawn a fresh instance with a handoff summary:
-      ```
-      You are taking over as a [Agent Type] agent.
-      Previous instance completed tasks: [task-id-1, task-id-2, task-id-3]
-      Commits: [sha1 "message1", sha2 "message2", sha3 "message3"]
-      Your remaining tasks: [task-id-4, task-id-5]
-      ```
-    - The rotation count resets for each new instance.
+12. Each read-only agent instance handles at most `Rotation After` tasks (default 3). After reaching the limit, retire it and spawn fresh with a handoff summary (completed task IDs, commit SHAs, remaining tasks). Builders are always fresh per task — rotation does not apply to them.
 
-### Anti-patterns and Correct Patterns
+### Scheduling Rules Summary
 
-**WRONG — spawning a new agent for each unique "Assigned To" label:**
-The spec has tasks assigned to "Security Builder 1", "Security Builder 2", "Builder 3", "Reviewer 1", "Reviewer 2", etc. You spawn a SEPARATE agent for each label — 14 unique labels = 14 agents. This is WRONG. "Assigned To" labels are cosmetic. All of those builders are Agent Type: builder. All of those reviewers are Agent Type: reviewer. You should have at most a few builder instances and a few reviewer instances, NOT one per label.
-
-**WRONG — reusing a builder/debugger agent via SendMessage:**
-A builder agent finishes task 1 and goes idle. Task 2 (Agent Type: builder) becomes unblocked. You send task 2 to the same builder via SendMessage. This is WRONG — the builder's worktree was cleaned up after task 1, so task 2 runs in the main directory with no isolation. Always spawn a fresh builder for each task.
-
-**RIGHT — reuse read-only agents, spawn fresh builders:**
-- A builder agent finishes task 1. Task 2 (Agent Type: builder) is unblocked. **Retire** builder-1 and **spawn a fresh builder** with `isolation: "worktree"` for task 2.
-- A reviewer agent finishes reviewing task 3. Task 5 (Agent Type: reviewer) is unblocked. Send task 5 to the SAME reviewer agent via `SendMessage` — reviewers are read-only and don't need worktree isolation. It does NOT matter that the labels are "Reviewer 1" and "Reviewer 3".
-- If tasks 2, 3, and 4 are ALL unblocked simultaneously, all Agent Type: builder, and 3 slots are free, spawn 3 builder instances in parallel — one per task. Since team mode has no worktree isolation, ensure these tasks touch different files.
-- After any read-only instance hits the rotation limit (3 tasks), retire it and spawn fresh if more tasks remain. Builders are always fresh per task so rotation doesn't apply to them.
-
-**Key rule:** One agent instance = one task at a time. Schedule by **Agent Type**, NEVER by "Assigned To" label. Reuse idle read-only agents before spawning new ones. NEVER reuse builder/debugger agents — always spawn fresh. DO spawn multiple instances of the same type when multiple tasks can run in parallel, but only when they touch different files.
+- Schedule by **Agent Type**, never by "Assigned To" label (labels are cosmetic).
+- One agent instance = one task at a time.
+- **Builders/debuggers**: always spawn fresh. Never reuse via SendMessage.
+- **Read-only agents** (reviewer, researcher, validator, architect, security-reviewer, tester, docs): reuse idle instances before spawning new ones.
+- Multiple builders CAN run in parallel — but they must touch different files.
 
 ### Commit After Completion
 
@@ -321,7 +294,7 @@ Team mode teammates do NOT support `isolation: "worktree"` — all teammates wor
 
 **Protocol:**
 1. After a builder/debugger task completes (and after review approval for builder tasks), check `git status` in the main working directory.
-2. Stage and commit the agent's changes immediately: `git add <changed-files> && git commit -S -m "<type>(<scope>): <what changed>"`.
+2. Stage and commit the agent's changes immediately: `git add <changed-files> && git commit -m "<type>(<scope>): <what changed>"`.
 3. **Commit before dispatching the next builder** — if two builders' uncommitted changes overlap in the working directory, you lose isolation. Sequential commit-then-dispatch prevents this.
 4. If no changes are visible (agent made no file modifications), note it and move on.
 
@@ -330,7 +303,7 @@ Team mode teammates do NOT support `isolation: "worktree"` — all teammates wor
 ### Review and Commit Workflow
 
 13. **MANDATORY: After every builder agent finishes a task that writes code, schedule a review task.** The builder does NOT move to its next task until the reviewer approves. Handle fix loops:
-    - If reviewer reports Critical or Important issues: spawn a **fresh** builder agent (with `isolation: "worktree"`) and include the review feedback plus original task context. Do NOT reuse the previous builder. After fixes, schedule another review. Repeat up to `Max Retries` times.
+    - If reviewer reports Critical or Important issues: spawn a **fresh** builder agent and include the review feedback plus original task context. Do NOT reuse the previous builder. After fixes, schedule another review. Repeat up to `Max Retries` times.
     - If max retries exceeded: stop and escalate to the user.
 14. **After the reviewer approves a task, commit the changes immediately** (see Commit After Completion above). Agents do NOT touch git — only the orchestrator commits.
 15. Research, architecture, and validation tasks do NOT need review. Read-only agents make no file changes — no commit needed.

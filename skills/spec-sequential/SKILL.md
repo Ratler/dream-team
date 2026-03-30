@@ -16,15 +16,9 @@ Convert the brainstorming conversation into a formal spec file for sequential ex
 
 **Prerequisites:** This skill assumes `/dream-team:plan` has already been run in this session. If the conversation has no brainstorming context (no discussed requirements, no confirmed approach, no validated task breakdown), stop and tell the user: "No brainstorming context found. Run `/dream-team:plan <prompt>` first to explore requirements and design."
 
-## Filename Format
-
-**All spec files MUST be named with a date prefix:** `specs/YYYY-MM-DD-<descriptive-kebab-case>.md`
-
-Use today's date. Example: `specs/2026-02-07-user-auth-api.md`
-
 ## What To Do
 
-1. Read the spec template at `${CLAUDE_PLUGIN_ROOT}/templates/spec-template.md`.
+1. Read the spec template at `${CLAUDE_PLUGIN_ROOT}/templates/spec-template.md` and the spec writing guide at `${CLAUDE_PLUGIN_ROOT}/templates/spec-writing-guide.md`. Follow the guide's filename format, ambiguity elimination, and git instructions.
 2. Summarize the agreed plan from the conversation — confirm with the user before writing.
 3. Write the spec, filling in all base sections from the brainstorming context.
 4. Set frontmatter `mode: sequential` and `spec-version: 1`.
@@ -35,21 +29,6 @@ Use today's date. Example: `specs/2026-02-07-user-auth-api.md`
 9. Do NOT include Team Members, Team Configuration, Review Policy, or agent assignment fields.
 10. Fill in the `## Cleanup` section with any teardown commands needed (stop servers, remove temp files). Use "N/A" if nothing to clean up.
 11. Save to `specs/YYYY-MM-DD-<descriptive-kebab-case>.md` using today's date.
-
-## Eliminating Ambiguity
-
-Specs are executed by agents that have no access to the brainstorming conversation. Every detail left unspecified becomes a coin flip — different builds will make different choices. The goal is **deterministic builds**: two agents reading the same spec should produce near-identical output.
-
-When writing task descriptions, prefer concrete values over descriptive language:
-
-- **CSS**: Specify exact hex colors, font stacks, spacing values, border-radius. Write `background: #1a1a2e` not "dark background". Write `font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif` not "system sans-serif stack".
-- **Strings**: Write exact user-facing text in quotes. Write `"Unable to load weather data"` not "an error message". Write `"${score} points by ${author} | ${comments} comments"` not "display the score, author, and comments".
-- **DOM structure**: Specify element types (`<div>`, `<p>`, `<span>`), class names, and nesting. Write `createElement("div")` not "create an element".
-- **API details**: Specify exact URLs, query parameters, response field paths, units, and data transformations (rounding, formatting). Write `windspeed_10m` with `mph` or `km/h` explicitly — don't leave the unit unspecified.
-- **Implementation patterns**: When a specific approach matters for consistency, spell it out. For example, specify whether a Promise should reject-and-catch or resolve-with-fallback. Specify timeout values. Specify whether to use `classList.remove()` or `className =`.
-- **Quote style**: If the project has a convention, state it (e.g., "use double quotes throughout JS").
-
-If you catch yourself writing a vague adjective ("red-tinted", "subtle", "clean"), replace it with the exact value. Vague descriptions are the #1 source of build divergence.
 
 ## Task Rules
 
@@ -62,14 +41,6 @@ If you catch yourself writing a vague adjective ("red-tinted", "subtle", "clean"
 - Keep tasks small — each should take 2-10 minutes to implement
 - Each builder task should produce 1-3 files and ~100-300 lines of code. If a task would be larger, split it into smaller tasks with clear file boundaries.
 - **The second-to-last task MUST be a code review task** — re-read all changed files, check for bugs, missing edge cases, security issues, and style. Fix anything found before final validation.
-
-## Git
-
-After saving the spec file, commit it:
-```
-git add specs/<spec-file>.md
-git commit -m "spec: <short description of what the spec covers>"
-```
 
 ## Report
 
