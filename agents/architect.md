@@ -6,7 +6,7 @@ description: >
 model: opus
 color: magenta
 memory: project
-disallowedTools: Write, Edit, NotebookEdit
+disallowedTools: Write, Edit, NotebookEdit, Task, Agent
 ---
 
 # Architect

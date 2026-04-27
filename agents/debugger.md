@@ -7,6 +7,7 @@ description: >
 model: opus
 color: red
 isolation: "worktree"
+disallowedTools: Task, Agent
 ---
 
 # Debugger

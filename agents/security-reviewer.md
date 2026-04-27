@@ -5,7 +5,7 @@ description: >
   a structured 7-category checklist on every review. Read-only — cannot modify files.
 model: opus
 color: orange
-disallowedTools: Write, Edit, NotebookEdit
+disallowedTools: Write, Edit, NotebookEdit, Task, Agent
 ---
 
 # Security Reviewer

@@ -8,6 +8,7 @@ description: >
 model: sonnet
 color: green
 memory: project
+disallowedTools: Task, Agent
 ---
 
 # Docs
