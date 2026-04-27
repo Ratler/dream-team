@@ -5,6 +5,7 @@ description: >
   and gathering context. Read-only — cannot write or edit files.
 model: sonnet
 color: green
+memory: project
 disallowedTools: Write, Edit, NotebookEdit
 ---
 

@@ -6,6 +6,7 @@ description: >
   builder TDD by testing from the spec (not the implementation) and targeting edge cases builders miss.
 model: sonnet
 color: blue
+memory: project
 ---
 
 # Tester
