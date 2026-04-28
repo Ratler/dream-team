@@ -8,6 +8,7 @@ model: opus
 color: red
 isolation: "worktree"
 disallowedTools: Task, Agent
+memory: project
 ---
 
 # Debugger

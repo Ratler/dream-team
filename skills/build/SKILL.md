@@ -7,6 +7,8 @@ hooks:
     - hooks:
         - type: command
           command: "node ${CLAUDE_PLUGIN_ROOT}/hooks/validate_build_complete.js"
+        - type: command
+          command: "node ${CLAUDE_PLUGIN_ROOT}/hooks/cleanup_worktrees.js"
 ---
 
 # Build

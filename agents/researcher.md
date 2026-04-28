@@ -6,6 +6,7 @@ description: >
 model: sonnet
 color: green
 disallowedTools: Write, Edit, NotebookEdit, Task, Agent
+memory: project
 ---
 
 # Researcher
