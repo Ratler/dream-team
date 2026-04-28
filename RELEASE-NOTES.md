@@ -1,5 +1,24 @@
 # Release Notes
 
+## 0.8.1
+
+### Worktree Cleanup: macOS Path Resolution Fix
+
+`hooks/cleanup_worktrees.js` compared paths using `path.join(cwd, '.claude/worktrees', name)` against
+the output of `git worktree list --porcelain`. On macOS, `/tmp` and `/var/folders` are symlinks to
+`/private/tmp` and `/private/var/folders`, so the constructed path and the registry path never
+matched. Every registered worktree was treated as an orphan and removed via `fs.rmSync -rf` —
+including locked and dirty ones — and clean worktrees had their branch left behind because
+`git worktree remove` was never called.
+
+The hook now resolves the constructed path via `fs.realpathSync` before consulting the worktree
+registry. Locked worktrees and worktrees with uncommitted changes are correctly skipped, and
+removed worktrees have their matching `worktree-agent-<id>` branch deleted as intended.
+
+No-op on Linux where `/tmp` and `/var` are not symlinks.
+
+---
+
 ## 0.8.0
 
 ### Persistent Build State
