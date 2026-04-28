@@ -53,18 +53,23 @@ function cleanupOne(cwd, name) {
   const stat = safe(() => fs.statSync(dir));
   if (!stat || !stat.isDirectory()) return { name, action: 'skip', reason: 'not a directory' };
 
-  const registered = listRegistered(cwd).get(dir);
+  // git worktree list reports the resolved real path. On macOS /tmp and
+  // /var/folders are symlinks (/private/tmp, /private/var/...), so the
+  // path constructed via path.join() will not match the registry entry
+  // unless we resolve symlinks first.
+  const realDir = safe(() => fs.realpathSync(dir)) || dir;
+  const registered = listRegistered(cwd).get(realDir);
 
   if (registered && registered.locked) {
     return { name, action: 'skip', reason: 'locked' };
   }
 
   if (registered) {
-    const dirty = safe(() => execSync('git status --porcelain', { cwd: dir, encoding: 'utf8' })) || '';
+    const dirty = safe(() => execSync('git status --porcelain', { cwd: realDir, encoding: 'utf8' })) || '';
     if (dirty.trim().length > 0) {
       return { name, action: 'skip', reason: 'uncommitted changes' };
     }
-    if (!gitOk(`worktree remove "${dir}"`, { cwd })) {
+    if (!gitOk(`worktree remove "${realDir}"`, { cwd })) {
       return { name, action: 'skip', reason: 'git worktree remove failed' };
     }
     gitOk(`branch -D "worktree-${name}"`, { cwd });
