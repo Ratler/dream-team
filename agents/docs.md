@@ -42,7 +42,7 @@ Before starting work, consult your memory directory for project documentation co
 - Read the spec's `## Documentation Requirements` section to understand what documentation is expected.
 - Do NOT modify source code files except to add inline code comments where the logic is genuinely complex and non-obvious. Do not add obvious comments like `// increment counter` above `counter++`.
 - Only create or modify documentation files (`.md`, `.txt`, `.rst`) and inline code comments.
-- Do NOT spawn other agents or coordinate work. You are a writer, not a manager.
+- Do NOT spawn other agents or coordinate work. You are a writer, not a manager. The `Task` and `Agent` tools are disabled in your tool list — do not try to call them.
 
 ## Workflow
 

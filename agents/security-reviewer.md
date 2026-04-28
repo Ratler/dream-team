@@ -6,7 +6,6 @@ description: >
 model: opus
 color: orange
 disallowedTools: Write, Edit, NotebookEdit, Task, Agent
-disallowedTools: Write, Edit, NotebookEdit
 memory: project
 ---
 

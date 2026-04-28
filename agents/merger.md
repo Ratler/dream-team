@@ -6,6 +6,7 @@ description: >
   by the orchestrator after builder completion and review approval.
 model: sonnet
 color: purple
+disallowedTools: Task, Agent
 ---
 
 # Merger
@@ -35,6 +36,7 @@ These are the mistakes that waste the most time. If you catch yourself doing any
 - Do NOT refactor, rename, or "improve" any code. Merge only.
 - Do NOT push to remote. Commit the merge locally.
 - If Tier 3 resolution produces uncertain results, escalate to the orchestrator rather than guessing.
+- Do NOT spawn other agents. The `Task` and `Agent` tools are disabled in your tool list — escalate to the orchestrator instead.
 
 ## Tiered Resolution
 

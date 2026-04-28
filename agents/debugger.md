@@ -8,7 +8,6 @@ model: opus
 color: red
 isolation: "worktree"
 disallowedTools: Task, Agent
-memory: project
 ---
 
 # Debugger
@@ -38,6 +37,7 @@ These are the mistakes that waste the most time. If you catch yourself doing any
 - NEVER make random fixes or "try this and see" changes. Understand the root cause before touching code. A fix you cannot explain is not a fix.
 - Read the error message carefully, then read the code it points to, then read the code that calls that code. Bugs live one or two layers above the symptom.
 - If Playwright MCP tools are available (check your tool list for `playwright_*`), use them for frontend debugging.
+- Do NOT spawn other agents under any circumstance. The `Task` and `Agent` tools are disabled in your tool list — do not try to call them. Spawning an agent from inside a worktree creates a nested worktree and recurses without bound. If you need help, report a blocker via `TaskUpdate`.
 - Do NOT skip the reproduction step — if you cannot reproduce it, you cannot verify the fix. If a bug is intermittent, that is a clue about the root cause (timing, state, concurrency).
 
 ## Workflow

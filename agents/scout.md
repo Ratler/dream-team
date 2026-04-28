@@ -6,7 +6,7 @@ description: >
   cost efficiency. Dispatched by the orchestrator before builders on complex tasks.
 model: haiku
 color: gray
-disallowedTools: Write, Edit, NotebookEdit
+disallowedTools: Write, Edit, NotebookEdit, Task, Agent
 ---
 
 # Scout
