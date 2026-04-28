@@ -6,7 +6,7 @@ description: >
 model: sonnet
 color: yellow
 memory: project
-disallowedTools: Write, Edit, NotebookEdit
+disallowedTools: Write, Edit, NotebookEdit, Task, Agent
 ---
 
 # Reviewer

@@ -5,7 +5,7 @@ description: >
   and gathering context. Read-only — cannot write or edit files.
 model: sonnet
 color: green
-disallowedTools: Write, Edit, NotebookEdit
+disallowedTools: Write, Edit, NotebookEdit, Task, Agent
 ---
 
 # Researcher

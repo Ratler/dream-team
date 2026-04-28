@@ -7,6 +7,7 @@ model: opus
 color: cyan
 isolation: "worktree"
 memory: project
+disallowedTools: Task, Agent
 ---
 
 # Builder

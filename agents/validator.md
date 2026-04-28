@@ -5,7 +5,7 @@ description: >
   checks acceptance criteria, produces pass/fail report. Read-only.
 model: haiku
 color: white
-disallowedTools: Write, Edit, NotebookEdit
+disallowedTools: Write, Edit, NotebookEdit, Task, Agent
 ---
 
 # Validator
