@@ -1,5 +1,117 @@
 # Release Notes
 
+## 0.8.0
+
+### Persistent Build State
+
+Builds can now resume from a fresh session. The TaskCompleted hook auto-persists each completed task's
+state to `specs/.build-state/<spec-name>/<task-id>.json`, and the build skill writes `in_progress` before
+dispatching each task. One file per task makes concurrent agent writes race-free. A `_meta.json` per
+build records branch, mode, and timing.
+
+A new PostCompact hook (`hooks/postcompact_checkpoint.js`) increments a `compactions` counter on the
+active build's `_meta.json`, surfacing context-pressure as a signal for long-running or stalled builds.
+
+### Documentation Agent
+
+New `docs` agent (Sonnet, read-write, `memory: project`) runs after the security reviewer and before
+the validator in all three execution modes. The agent reads the spec's `## Documentation Requirements`
+section, the diff of changed files, and produces README updates, changelog entries, and inline comments
+for non-obvious logic only.
+
+Documentation responsibilities were stripped from the builder and reviewer agents to remove ambiguity
+about who owns docs. Builder may still add inline comments when logic is genuinely complex; everything
+else is the docs agent's job.
+
+The TaskCompleted hook now runs `markdown-table-formatter` on any `.md` files referenced in the task
+description (no-op if the formatter is not installed) so generated docs match the project's table style.
+
+### Opinionated Plan Skill
+
+`/dream-team:plan` Phase 2 now assesses complexity from Phase 1 codebase findings and calibrates how
+deep its questioning goes. Instead of neutral open-ended prompts, questions present a **recommended
+answer** grounded in evidence from the codebase ("looking at how X is structured, I'd recommend Y —
+agreed?"). Decision trees are walked systematically rather than ad hoc, and the one-question-per-turn
+rule is relaxed for tightly coupled follow-ups so simple decisions don't stretch across many turns.
+
+### Build and Spec Skill Cleanup
+
+`skills/build/SKILL.md` was trimmed (389 → 362 lines): the ignored "Before Each Task" section was
+removed, "After Commits" was merged into "On Task Completion", and the delegated/team mode IMPORTANT
+blocks were consolidated. Two latent bugs were fixed in the same pass: a stale worktree reference in
+the team review loop and a spurious `-S` flag in the team-mode commit command.
+
+The three spec skills had ~29 lines of duplicated guidance each ("Eliminating Ambiguity", filename
+format, git sections) extracted into `templates/spec-writing-guide.md`. Net savings across the four
+files: 82 lines. After-trim testing showed `commitSha` adherence improving from 40% to 100% across
+5 runs — the smaller surface area made the remaining instructions stick.
+
+### Scout and Merger Agents
+
+Two new agents support the delegated execution mode:
+
+- **scout** (Haiku, read-only) — fast pre-build reconnaissance. The orchestrator dispatches scout
+  before any builder on complex tasks to map file structure, conventions, test patterns, and gotchas.
+  Builders receive scout's report in their dispatch prompt instead of rediscovering the codebase
+  themselves.
+- **merger** (Sonnet) — branch integration with tiered conflict resolution. After a builder commits
+  inside its worktree and review approves, merger integrates the worktree branch back into the
+  feature branch. Tier 1: clean merge. Tier 2: auto-resolve obvious conflicts. Tier 3: AI-resolve
+  semantic conflicts; escalate when intents are incompatible.
+
+The build skill gained complexity assessment (drives whether scout runs), per-task file scope
+declarations, merger dispatch on review approval, and explicit cost-awareness guidance for when to
+choose delegated over team mode.
+
+All nine agents (builder, debugger, researcher, architect, reviewer, security-reviewer, tester,
+validator, docs) gained three new structural sections — **Propulsion** (act on first tool call, no
+preamble), **Failure Modes** (named anti-patterns with corrections, e.g. `SHOTGUN_FIX`,
+`HAND_WAVY_DESIGN`, `IVORY_TOWER`), and **Completion Protocol** (explicit ordered steps before
+calling `TaskUpdate`).
+
+### Recursive Sub-Agent Spawn Protection
+
+Worker agents inherit the Task/Agent tools when spawned, which let them recursively call
+`Agent(isolation: "worktree")` from inside their own worktree — producing
+`.claude/worktrees/agent-X/.claude/worktrees/agent-Y/...` paths that recurse without bound. Each
+level paid for a fresh git clone, a new SessionStart, and full context reload.
+
+Three layers of defense:
+
+1. **Frontmatter** (`disallowedTools: Task, Agent`) on every non-orchestrator agent — builder,
+   debugger, researcher, architect, reviewer, security-reviewer, tester, validator, docs, scout,
+   merger. Hard-blocks the listed tools at the agent runtime level.
+2. **PreToolUse hook** (`hooks/block_nested_agent.js`) — fires on every Agent/Task call. If the
+   caller's `cwd` is inside `.claude/worktrees/agent-<hex>/`, the hook blocks the call regardless
+   of agent definition. Defense-in-depth in case a future agent definition omits the frontmatter
+   field.
+3. **Prose rule** in builder, debugger, and merger — explains *why* nested worktrees recurse and
+   what the agent should do instead (report a blocker via `TaskUpdate`).
+
+### Worktree Auto-Cleanup
+
+A new Stop hook (`hooks/cleanup_worktrees.js`) runs after `/dream-team:build` finishes and removes
+idle agent worktrees. Without this, worktrees accumulated every build (one per builder/debugger) and
+were never reclaimed — observed locally at 3.5 GB across four projects.
+
+Cleanup rules: prune stale registry entries, remove orphan directories, remove registered worktrees
+that are clean and unlocked (plus delete the matching `worktree-agent-<id>` branch). Locked worktrees
+and worktrees with uncommitted changes are skipped — those signal "do not touch" and require human
+review. Cleanup failures never block the build from completing.
+
+### Project Memory Expansion
+
+`memory: project` was extended to researcher, security-reviewer, debugger, and tester. Builder,
+reviewer, architect, and docs already had it. This lets researcher remember codebase patterns and
+prior investigations across runs, security-reviewer remember the project threat model and prior
+findings, tester remember edge cases that have bitten before, and debugger remember infra quirks
+and reproduction tricks.
+
+Validator is intentionally excluded — its job is mechanical pass/fail with no cross-session knowledge
+worth preserving.
+
+---
+
 ## 0.7.1
 
 ### Ambiguity Elimination
