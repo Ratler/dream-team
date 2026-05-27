@@ -1,5 +1,27 @@
 # Release Notes
 
+## 0.8.2
+
+### Nested-Agent Hook: Stop False-Positive Blocks After Background Workers
+
+`hooks/block_nested_agent.js` previously refused any `Agent`/`Task` call whose session `cwd` matched
+the agent-worktree path regex. That regex check was too broad: Claude Code 2.1.x leaks a completed
+background+worktree subagent's `cwd` into the orchestrator's session `cwd` field, so the
+orchestrator's next legitimate review/validate dispatch was being blocked as a false positive.
+Delegated builds with `run_in_background: true` workers would stall after the first builder
+finished, with errors like `Refusing to spawn a sub-agent from inside a Dream Team worktree`.
+
+The hook now blocks only when **both** conditions hold:
+1. `cwd` is inside an agent worktree.
+2. The dispatched tool's input requests `isolation: "worktree"`.
+
+That is the only case that would actually create a nested worktree — the runaway recursion the
+hook exists to prevent. Plain reviewer/researcher/validator/docs dispatches go through regardless
+of the stale `cwd`. Agent-definition `disallowedTools: Task, Agent` and the platform-level
+"subagents can't spawn subagents" rule remain the primary defenses.
+
+---
+
 ## 0.8.1
 
 ### Worktree Cleanup: macOS Path Resolution Fix
