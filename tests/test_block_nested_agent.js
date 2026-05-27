@@ -27,50 +27,106 @@ function runHook(stdinData) {
 
 console.log('Testing block_nested_agent.js...\n');
 
+const WORKTREE_DISPATCH = { isolation: 'worktree', subagent_type: 'builder' };
+const PLAIN_DISPATCH = { subagent_type: 'reviewer' };
+
 test('allows non-Agent tool through', () => {
   const r = runHook({ toolName: 'Read', cwd: '/root/proj/.claude/worktrees/agent-abc123' });
   assert(Object.keys(r).length === 0, `expected {}, got ${JSON.stringify(r)}`);
 });
 
 test('allows Agent call from outside any worktree', () => {
-  const r = runHook({ toolName: 'Agent', cwd: '/root/myproject' });
+  const r = runHook({ toolName: 'Agent', cwd: '/root/myproject', toolInput: WORKTREE_DISPATCH });
   assert(Object.keys(r).length === 0, `expected {}, got ${JSON.stringify(r)}`);
 });
 
-test('blocks Agent call from inside an agent worktree', () => {
-  const r = runHook({ toolName: 'Agent', cwd: '/root/proj/.claude/worktrees/agent-a1b2c3d4' });
+test('blocks worktree-isolated Agent call from inside an agent worktree', () => {
+  const r = runHook({
+    toolName: 'Agent',
+    cwd: '/root/proj/.claude/worktrees/agent-a1b2c3d4',
+    toolInput: WORKTREE_DISPATCH,
+  });
   assert(r.decision === 'block', `expected block, got ${JSON.stringify(r)}`);
   assert(r.reason.includes('worktree'), 'reason should mention worktree');
 });
 
-test('blocks Task call from inside an agent worktree (legacy tool name)', () => {
-  const r = runHook({ toolName: 'Task', cwd: '/root/proj/.claude/worktrees/agent-deadbeef' });
+test('blocks worktree-isolated Task call from inside an agent worktree (legacy tool name)', () => {
+  const r = runHook({
+    toolName: 'Task',
+    cwd: '/root/proj/.claude/worktrees/agent-deadbeef',
+    toolInput: WORKTREE_DISPATCH,
+  });
   assert(r.decision === 'block', `expected block, got ${JSON.stringify(r)}`);
 });
 
 test('blocks even when path is nested deeper inside the worktree', () => {
-  const r = runHook({ toolName: 'Agent', cwd: '/root/proj/.claude/worktrees/agent-feed42/src/components' });
+  const r = runHook({
+    toolName: 'Agent',
+    cwd: '/root/proj/.claude/worktrees/agent-feed42/src/components',
+    toolInput: WORKTREE_DISPATCH,
+  });
   assert(r.decision === 'block', `expected block, got ${JSON.stringify(r)}`);
 });
 
 test('does not match a directory called .claude/worktrees/agent_xyz (wrong separator)', () => {
-  const r = runHook({ toolName: 'Agent', cwd: '/root/proj/.claude/worktrees/agent_xyz' });
+  const r = runHook({
+    toolName: 'Agent',
+    cwd: '/root/proj/.claude/worktrees/agent_xyz',
+    toolInput: WORKTREE_DISPATCH,
+  });
   assert(Object.keys(r).length === 0, `expected {}, got ${JSON.stringify(r)}`);
 });
 
 test('does not match a path with similar but unrelated segment name', () => {
-  const r = runHook({ toolName: 'Agent', cwd: '/root/proj/agent-abc123' });
+  const r = runHook({
+    toolName: 'Agent',
+    cwd: '/root/proj/agent-abc123',
+    toolInput: WORKTREE_DISPATCH,
+  });
   assert(Object.keys(r).length === 0, `expected {}, got ${JSON.stringify(r)}`);
 });
 
-test('snake_case fallback (tool_name)', () => {
-  const r = runHook({ tool_name: 'Agent', cwd: '/root/proj/.claude/worktrees/agent-abc' });
+test('snake_case fallback (tool_name + tool_input)', () => {
+  const r = runHook({
+    tool_name: 'Agent',
+    cwd: '/root/proj/.claude/worktrees/agent-abc',
+    tool_input: WORKTREE_DISPATCH,
+  });
   assert(r.decision === 'block', `expected block, got ${JSON.stringify(r)}`);
 });
 
 test('handles missing cwd gracefully (uses process.cwd which is not a worktree)', () => {
-  const r = runHook({ toolName: 'Agent' });
+  const r = runHook({ toolName: 'Agent', toolInput: WORKTREE_DISPATCH });
   // process.cwd() running tests is the test invocation dir, not a worktree
+  assert(Object.keys(r).length === 0, `expected {}, got ${JSON.stringify(r)}`);
+});
+
+test('allows non-isolated dispatch even when cwd looks like a worktree (orchestrator cwd-leak case)', () => {
+  // Claude Code 2.1.x can leak a completed background+worktree subagent's cwd
+  // into the orchestrator's session cwd. Dispatching a reviewer (no isolation)
+  // in this state must NOT be blocked.
+  const r = runHook({
+    toolName: 'Agent',
+    cwd: '/root/proj/.claude/worktrees/agent-a55c4c08f89190342',
+    toolInput: PLAIN_DISPATCH,
+  });
+  assert(Object.keys(r).length === 0, `expected {}, got ${JSON.stringify(r)}`);
+});
+
+test('allows dispatch with isolation set to something other than "worktree"', () => {
+  const r = runHook({
+    toolName: 'Agent',
+    cwd: '/root/proj/.claude/worktrees/agent-abc',
+    toolInput: { isolation: 'none', subagent_type: 'reviewer' },
+  });
+  assert(Object.keys(r).length === 0, `expected {}, got ${JSON.stringify(r)}`);
+});
+
+test('allows dispatch with no toolInput field (treated as non-worktree)', () => {
+  const r = runHook({
+    toolName: 'Agent',
+    cwd: '/root/proj/.claude/worktrees/agent-abc',
+  });
   assert(Object.keys(r).length === 0, `expected {}, got ${JSON.stringify(r)}`);
 });
 
