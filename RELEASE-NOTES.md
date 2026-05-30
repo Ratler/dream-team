@@ -1,5 +1,30 @@
 # Release Notes
 
+## 0.9.0
+
+### Reviewer: Structural-Quality Enforcement
+
+The `reviewer` agent now treats structural and maintainability quality as co-equal with correctness. A
+new **Structural Quality Pass** runs on every review against seven checks: missed simplifications, a
+~1k-line file-size threshold, spaghetti conditionals, "magic" indirection, boundary leaks, non-atomic
+state updates, and **architect-design compliance** — making the reviewer the post-build enforcement
+backstop for the architect's design. The build skill now passes the architect's design into the
+reviewer dispatch (delegated and team modes) to ground that check.
+
+Findings use a tiered severity model: regressions and unjustified design drift are **Important** (block
+and trigger a rebuild), state-corrupting updates are **Critical**, and "could-be-cleaner"
+opportunities are **Minor** (mentioned, non-blocking). Two new failure modes — `STRUCTURE_BLIND` and
+`ARCHITECT_DRIFT_IGNORED` — enforce the pass. Adapted from Cursor's
+`thermo-nuclear-code-quality-review` skill, re-shaped into Dream Team's named-failure-mode and
+numbered-step idiom.
+
+### Agent Listings Corrected
+
+The `docs`, `scout`, and `merger` agents were missing from the README table and the SessionStart agent
+guide, which still claimed eight agents. Both now list all eleven.
+
+---
+
 ## 0.8.2
 
 ### Nested-Agent Hook: Stop False-Positive Blocks After Background Workers
