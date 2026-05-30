@@ -41,7 +41,10 @@ Dream Team provides structured planning and execution for development projects a
 - security-reviewer: proactive security audit with structured checklist (opus)
 - tester: writes and runs tests, TDD workflow (sonnet)
 - validator: final mechanical pass/fail verification (haiku)
-- debugger: systematic debugging, reproduces and fixes issues (opus)`;
+- debugger: systematic debugging, reproduces and fixes issues (opus)
+- docs: produces and updates project documentation after code is written (sonnet)
+- scout: fast pre-build reconnaissance of file structure and conventions (haiku)
+- merger: integrates builder worktree branches with tiered conflict resolution (sonnet)`;
 
   return guide;
 }
