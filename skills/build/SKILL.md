@@ -161,7 +161,7 @@ You are the orchestrator. You NEVER write code directly — you dispatch agents.
      - For merger: model sonnet. No isolation. Dispatched for branch integration after builder review approval (replaces the inline merge protocol).
    - Provide the FULL task description, relevant file paths, and acceptance criteria in the prompt. Do not tell the agent to read the spec — give it everything.
 7. **MANDATORY: After every builder task that writes code, dispatch a reviewer agent.** Do NOT skip this step. Do NOT mark the builder task as completed until the reviewer has approved it.
-   - Dispatch a `reviewer` agent (model: sonnet) with the task spec, files changed, and a summary of what the builder did.
+   - Dispatch a `reviewer` agent (model: sonnet) with the task spec, files changed, and a summary of what the builder did, and, if an architect produced a design for this task, the architect's design output so the reviewer can verify the implementation followed it.
    - If reviewer reports Critical or Important issues:
      - Spawn a **fresh** builder agent (with `isolation: "worktree"`) and include the review feedback plus original task context in the prompt. Do NOT resume the previous builder — its worktree is gone.
      - After fixes, dispatch reviewer again.
@@ -323,7 +323,7 @@ Team mode teammates do NOT support `isolation: "worktree"` — all teammates wor
 
 ### Review and Commit Workflow
 
-13. **MANDATORY: After every builder agent finishes a task that writes code, schedule a review task.** The builder does NOT move to its next task until the reviewer approves. Handle fix loops:
+13. **MANDATORY: After every builder agent finishes a task that writes code, schedule a review task.** The builder does NOT move to its next task until the reviewer approves. (When an architect produced a design for the task, include that design output in the review task context so the reviewer can verify the implementation followed it.) Handle fix loops:
     - If reviewer reports Critical or Important issues: spawn a **fresh** builder agent and include the review feedback plus original task context. Do NOT reuse the previous builder. After fixes, schedule another review. Repeat up to `Max Retries` times.
     - If max retries exceeded: stop and escalate to the user.
 14. **After the reviewer approves a task, commit the changes immediately** (see Commit After Completion above). Agents do NOT touch git — only the orchestrator commits.
