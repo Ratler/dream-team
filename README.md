@@ -5,7 +5,7 @@ A Claude Code plugin for planning and executing development projects across thre
 ## Overview
 
 Dream Team provides structured planning skills that generate spec files, and a universal build skill that reads the
-spec and executes it using the appropriate strategy. It ships with eight specialized agents for common development roles.
+spec and executes it using the appropriate strategy. It ships with eleven specialized agents for common development roles.
 
 ## Prerequisites
 
@@ -75,7 +75,7 @@ claude plugin install dream-team@dream-team-marketplace
 |---------------------|-----------------------------------------------------------|
 | **Philosophy**      | Turn Claude into a project lead                           |
 | **Skills**          | 6 pipeline-connected skills (plan, spec x3, build, debug) |
-| **Agents**          | 8 named roles with per-agent model and tool policies      |
+| **Agents**          | 11 named roles with per-agent model and tool policies     |
 | **Execution modes** | Sequential, Delegated, Team                               |
 | **Planning**        | Formal specs with YAML frontmatter                        |
 | **Task tracking**   | TaskCreate/TaskUpdate with dependency graph               |
@@ -160,6 +160,9 @@ Six JavaScript hooks run at key points in the workflow:
 | tester            | sonnet | Writes and runs tests                                                                             |
 | validator         | haiku  | Fast validation checks (read-only)                                                                |
 | debugger          | opus   | Systematic debugging: reproduce, investigate, fix                                                 |
+| docs              | sonnet | Produces and updates project documentation after code is written                                  |
+| scout             | haiku  | Fast pre-build reconnaissance of file structure and conventions (read-only)                       |
+| merger            | sonnet | Integrates builder worktree branches with tiered conflict resolution                              |
 
 
 ## Tests
