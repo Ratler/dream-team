@@ -148,20 +148,20 @@ You are the orchestrator. You NEVER write code directly — you dispatch agents.
 5. **Assess task complexity before dispatching.** For each task, evaluate its complexity before choosing the dispatch strategy:
    - **Simple** (1-2 files, well-understood area, config or minor tweak): Execute the task directly in the orchestrator session. Do not spawn a sub-agent. This saves the cost of agent creation for trivial work.
    - **Moderate** (2-5 files, straightforward implementation): Dispatch a single builder agent as normal.
-   - **Complex** (5+ files, unfamiliar area, multiple subsystems, or the task description flags uncertainty): Dispatch a `scout` agent (model: haiku) first to reconnoiter the target area. Use the scout's findings to enrich the builder's dispatch prompt with specific file paths, conventions, and gotchas. Then dispatch the builder.
+   - **Complex** (5+ files, unfamiliar area, multiple subsystems, or the task description flags uncertainty): Dispatch a `scout` agent first to reconnoiter the target area. Use the scout's findings to enrich the builder's dispatch prompt with specific file paths, conventions, and gotchas. Then dispatch the builder.
    When in doubt, lean toward dispatching rather than doing it yourself — the cost of a wrong direct implementation exceeds the cost of a sub-agent.
 6. For each unblocked task:
    - If `Background: true` and no dependency conflicts, dispatch with `run_in_background: true`.
-   - Dispatch the assigned agent via `Task(subagent_type: "<agent-type>", model: "<model>", ...)`.
+   - Dispatch the assigned agent via `Task(subagent_type: "<agent-type>", ...)`.
    - **Agent dispatch rules:**
-     - Always pass `model` matching the agent definition: builder=opus, researcher=sonnet, reviewer=sonnet, tester=sonnet, validator=haiku, architect=opus, debugger=opus, security-reviewer=opus, docs=sonnet, scout=haiku, merger=sonnet.
+     - Do NOT pass `model` — each agent definition's frontmatter (`agents/*.md`) is the single source of truth and is applied automatically when `model` is omitted. Passing it explicitly would override the definition and silently break per-agent customization.
      - For builder/debugger: always pass `isolation: "worktree"` and always spawn fresh (never reuse — worktrees are cleaned up after completion).
      - For read-only agents (reviewer, researcher, validator, architect, security-reviewer, tester, docs): no isolation needed, CAN be reused.
-     - For scout: model haiku. No isolation. Read-only. Can be reused.
-     - For merger: model sonnet. No isolation. Dispatched for branch integration after builder review approval (replaces the inline merge protocol).
+     - For scout: No isolation. Read-only. Can be reused.
+     - For merger: No isolation. Dispatched for branch integration after builder review approval (replaces the inline merge protocol).
    - Provide the FULL task description, relevant file paths, and acceptance criteria in the prompt. Do not tell the agent to read the spec — give it everything.
 7. **MANDATORY: After every builder task that writes code, dispatch a reviewer agent.** Do NOT skip this step. Do NOT mark the builder task as completed until the reviewer has approved it.
-   - Dispatch a `reviewer` agent (model: sonnet) with the task spec, files changed, and a summary of what the builder did, and, if an architect produced a design for this task, the architect's design output so the reviewer can verify the implementation followed it.
+   - Dispatch a `reviewer` agent with the task spec, files changed, and a summary of what the builder did, and, if an architect produced a design for this task, the architect's design output so the reviewer can verify the implementation followed it.
    - If reviewer reports Critical or Important issues:
      - Spawn a **fresh** builder agent (with `isolation: "worktree"`) and include the review feedback plus original task context in the prompt. Do NOT resume the previous builder — its worktree is gone.
      - After fixes, dispatch reviewer again.
@@ -169,11 +169,11 @@ You are the orchestrator. You NEVER write code directly — you dispatch agents.
      - If max retries exceeded: stop and escalate to the user.
    - If reviewer approves (or only Minor issues): **merge the worktree branch** (see Worktree Merge below), then mark task `completed`.
    - Research, architecture, and validation tasks do NOT need review. No merge needed (read-only agents).
-8. **After all builder tasks are complete and reviewed, dispatch a `security-reviewer` agent** (model: opus) to audit all files changed on the feature branch. Provide the list of changed files (`git diff --name-only main...HEAD`) and the spec's acceptance criteria.
+8. **After all builder tasks are complete and reviewed, dispatch a `security-reviewer` agent** to audit all files changed on the feature branch. Provide the list of changed files (`git diff --name-only main...HEAD`) and the spec's acceptance criteria.
    - If the security reviewer reports Critical issues: resume the relevant builder agent to fix them, then re-dispatch the security reviewer. Repeat up to `Max Retries` times.
    - Important issues: send to the builder for fixing but do not require a security re-review.
    - Commit security fixes before proceeding to documentation.
-9. **After the security review is complete (and any security fixes are committed), dispatch a `docs` agent** (model: sonnet) to produce documentation. Provide: the spec's `## Documentation Requirements` section, the list of files changed on the feature branch (`git diff --name-only main...HEAD`), and the spec's acceptance criteria. The docs agent commits its own changes. After the docs agent completes, proceed to the validator.
+9. **After the security review is complete (and any security fixes are committed), dispatch a `docs` agent** to produce documentation. Provide: the spec's `## Documentation Requirements` section, the list of files changed on the feature branch (`git diff --name-only main...HEAD`), and the spec's acceptance criteria. The docs agent commits its own changes. After the docs agent completes, proceed to the validator.
 10. After all tasks: dispatch a `validator` agent for final verification.
 
 ### Worktree Merge (Delegated Mode)
@@ -184,7 +184,7 @@ Builder and debugger agents run with `isolation: "worktree"`, each on its own br
 1. After a builder/debugger task completes and the reviewer approves, identify the worktree branch from the task output or `git worktree list` / `git branch`.
 2. Ensure you are on the feature branch: `git checkout feat/<spec-name>`.
 3. For clean merges (no expected conflicts): merge directly with `git merge <worktree-branch> --no-ff -m "merge: <worktree-branch>"`.
-4. If merge conflicts occur OR if multiple builders worked on related areas: dispatch a `merger` agent (model: sonnet) with the source branch, target branch, and context about what the builder changed. The merger handles tiered conflict resolution. If the merger agent cannot resolve conflicts, escalate to the user.
+4. If merge conflicts occur OR if multiple builders worked on related areas: dispatch a `merger` agent with the source branch, target branch, and context about what the builder changed. The merger handles tiered conflict resolution. If the merger agent cannot resolve conflicts, escalate to the user.
 5. **Merge before dispatching the next builder** — sequential merge-then-dispatch prevents compounding conflicts.
 
 **Note:** Read-only agents (reviewer, validator, researcher, security-reviewer, architect) make no file changes — no merge needed.
@@ -291,7 +291,7 @@ You are the orchestrator of a dynamic agent team. You NEVER write code directly 
     b. For each unblocked task:
        - **Builder/debugger → spawn fresh**: Never reuse via SendMessage. Team mode has no worktree isolation — commit after each builder completes (see Commit After Completion) and ensure parallel builders touch different files.
        - **Read-only agents + docs → reuse if idle**: Same **Agent Type** match (ignore "Assigned To" labels). If no idle agent, spawn new if slot is free.
-       - Pass `model` matching agent type (builder=opus, researcher=sonnet, reviewer=sonnet, tester=sonnet, validator=haiku, architect=opus, debugger=opus, security-reviewer=opus, docs=sonnet, scout=haiku). Include full task text, file paths, and acceptance criteria.
+       - Do NOT pass `model` — each agent definition's frontmatter (`agents/*.md`) is the single source of truth and is applied automatically when `model` is omitted. Include full task text, file paths, and acceptance criteria.
        - **No free slot → wait** for an agent to complete, then return to (a).
     c. Free slots when agents complete and no unblocked tasks need their type.
     d. **HARD CAP: Never exceed `Max Active Agents`.** Count active agents before every spawn.
@@ -341,8 +341,8 @@ Team mode teammates do NOT support `isolation: "worktree"` — all teammates wor
 
 ### Completion
 
-18. **Before dispatching the docs agent**: spawn a `security-reviewer` agent (model: opus) in a free slot to audit all files changed on the feature branch. Provide the list of changed files (`git diff --name-only main...HEAD`) and the spec's acceptance criteria. If Critical issues are found, spawn a **fresh** builder agent (with `isolation: "worktree"`) to fix them. After fixes, commit and re-run the security review. Commit security fixes before proceeding to documentation.
-19. **After the security review is complete (and any security fixes are committed), spawn a `docs` agent** (model: sonnet) in a free slot to produce documentation. Provide: the spec's `## Documentation Requirements` section, the list of files changed on the feature branch (`git diff --name-only main...HEAD`), and the spec's acceptance criteria. Commit the docs agent's changes immediately after it completes (same protocol as builder commits in team mode). Then proceed to the validator.
+18. **Before dispatching the docs agent**: spawn a `security-reviewer` agent in a free slot to audit all files changed on the feature branch. Provide the list of changed files (`git diff --name-only main...HEAD`) and the spec's acceptance criteria. If Critical issues are found, spawn a **fresh** builder agent (with `isolation: "worktree"`) to fix them. After fixes, commit and re-run the security review. Commit security fixes before proceeding to documentation.
+19. **After the security review is complete (and any security fixes are committed), spawn a `docs` agent** in a free slot to produce documentation. Provide: the spec's `## Documentation Requirements` section, the list of files changed on the feature branch (`git diff --name-only main...HEAD`), and the spec's acceptance criteria. Commit the docs agent's changes immediately after it completes (same protocol as builder commits in team mode). Then proceed to the validator.
 20. After all tasks are complete: spawn a validator agent in a free slot for final verification.
 21. Clean up — no further messages to any agents.
 
