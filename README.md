@@ -155,14 +155,14 @@ Six JavaScript hooks run at key points in the workflow:
 | builder           | opus   | Writes code, runs tests, commits                                                                  |
 | researcher        | sonnet | Explores codebases and gathers context (read-only)                                                |
 | architect         | opus   | Designs systems and makes technical decisions (read-only)                                         |
-| reviewer          | sonnet | Reviews code for correctness, spec-compliance, and structural/maintainability quality (read-only) |
+| reviewer          | opus   | Reviews code for correctness, spec-compliance, and structural/maintainability quality (read-only) |
 | security-reviewer | opus   | Proactive security audit with structured checklist (read-only)                                    |
 | tester            | sonnet | Writes and runs tests                                                                             |
 | validator         | haiku  | Fast validation checks (read-only)                                                                |
 | debugger          | opus   | Systematic debugging: reproduce, investigate, fix                                                 |
 | docs              | sonnet | Produces and updates project documentation after code is written                                  |
-| scout             | haiku  | Fast pre-build reconnaissance of file structure and conventions (read-only)                       |
-| merger            | sonnet | Integrates builder worktree branches with tiered conflict resolution                              |
+| scout             | sonnet | Fast pre-build reconnaissance of file structure and conventions (read-only)                       |
+| merger            | opus   | Integrates builder worktree branches with tiered conflict resolution                              |
 
 
 ## Tests
