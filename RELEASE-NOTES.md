@@ -35,6 +35,12 @@ Opus 5.5 costs only about twice as much as Sonnet 5, so three roles where mistak
 
 ### Fixes
 
+- **Duplicate slash commands removed**: `commands/{plan,build,debug,spec-sequential,spec-delegated,spec-team}.md`
+  were wrappers around the skills with the same names, so each name appeared twice in the `/` menu. Picking the
+  command version also meant the model read `SKILL.md` as plain text, so the skill's Stop hooks
+  (`validate_spec_exists.js`, `validate_spec_sections.js`, `validate_build_complete.js`, `cleanup_worktrees.js`)
+  never ran. The wrappers are gone. Only `commands/progress.md` is left, and the "no arguments → usage" check
+  now lives at the top of the plan, build, and debug skills.
 - The `tester` agent now commits its own test files. The commit step used to come only from the
   dispatch template, so it disappeared when the template was shortened.
 - Delegated mode no longer says to *resume* a builder to fix security findings. Builders are never

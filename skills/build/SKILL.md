@@ -13,6 +13,8 @@ hooks:
 
 # Build
 
+**If no arguments were provided, stop immediately and tell the user: "Usage: /dream-team:build <path-to-spec>". Do not proceed.**
+
 Execute an implementation plan by reading a spec file and running the strategy matching its declared mode.
 
 ## Variables

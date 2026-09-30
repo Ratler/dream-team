@@ -6,6 +6,8 @@ argument-hint: "<describe what's broken>"
 
 # Debugging Through Investigation
 
+**If no arguments were provided, stop immediately and tell the user: "Usage: /dream-team:debug <describe what's broken>". Do not proceed.**
+
 Help the user debug an issue through systematic investigation and hypothesis-driven problem solving. This is a conversation, not a fix-it script.
 
 Start by understanding the issue, then reproduce it, form theories, investigate with evidence, and only fix once you understand the root cause.

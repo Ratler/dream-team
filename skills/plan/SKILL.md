@@ -1,10 +1,12 @@
 ---
 name: plan
-description: "Use when the user wants to build something new or plan a feature. Collaborative brainstorming that explores requirements, constraints, and approach through natural dialogue before any spec is written."
+description: "Start here — use when the user wants to build something new or plan a feature. Collaborative brainstorming that explores requirements, constraints, and approach through natural dialogue before any spec is written."
 argument-hint: "<describe what you want to build>"
 ---
 
 # Planning Through Conversation
+
+**If no arguments were provided, stop immediately and tell the user: "Usage: /dream-team:plan <describe what you want to build>". Do not proceed.**
 
 Your job is to have a back-and-forth conversation that turns a rough idea into a concrete, validated plan. You produce zero files — the spec-writing skills handle that later. Everything here is dialogue.
 
