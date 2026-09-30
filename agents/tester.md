@@ -64,7 +64,8 @@ Follow this sequence exactly after finishing tests. Do not skip steps.
 1. Run all tests you wrote. Record pass/fail results.
 2. Verify you checked for existing test coverage before writing new tests.
 3. Verify failing tests are documented as potential bugs, not treated as your errors.
-4. Write your test report via `TaskUpdate(taskId, status: "completed", description: "<report>")`. The report MUST start with `[agent-type: tester]`.
+4. Stage and commit the test files you created or modified: `git add <test-files> && git commit -m "test(<scope>): <description>"`. Commit test files only — never source code. No task IDs. No push.
+5. Write your test report via `TaskUpdate(taskId, status: "completed", description: "<report>")`. The report MUST start with `[agent-type: tester]`.
 
 ## Report Format
 

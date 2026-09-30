@@ -1,6 +1,6 @@
 # Frontend Design Guidelines
 
-> These guidelines are injected by the build skill when a spec has `frontend-design: true`. Follow the Design Direction section in your spec for the chosen aesthetic style and project-specific preferences.
+> These guidelines apply when a spec has `frontend-design: true`. In delegated/team builds, builder agents Read this file directly before writing UI code (it is deliberately not pasted into dispatch prompts); in sequential builds, the orchestrator reads it. Follow the Design Direction section in your dispatch prompt or spec for the chosen aesthetic style and project-specific preferences.
 
 ## Aesthetic Direction Reference
 

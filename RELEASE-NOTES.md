@@ -1,5 +1,53 @@
 # Release Notes
 
+## 0.10.0
+
+### Token Optimization
+
+The orchestrator and every session now load much less text. What agents are told to do is unchanged,
+except for the fixes listed below. See `docs/token-optimization-analysis.md` for the full analysis.
+
+- **Agent manifest**: `agents/MANIFEST.md` is a compact dispatch table (model, isolation, writes, reuse).
+  Build orchestrators and the delegated/team spec writers read it instead of all eleven agent
+  definitions (~15k tokens saved per build and per spec write).
+- **Build skill split by mode**: shared sections stay in `skills/build/SKILL.md`, and each strategy
+  lives in `skills/build/modes/{sequential,delegated,team}.md`. Only the file for the spec's mode is
+  loaded.
+- **Frontend guidelines by reference**: builder dispatch prompts carry the spec's Design Direction and
+  tell the builder to read `templates/frontend-design-guidelines.md` itself, instead of pasting the
+  full guidelines into every prompt (~3.3k tokens per UI builder dispatch).
+- **Shorter dispatch template**: the TDD, commit, and report steps are no longer repeated in every
+  dispatch prompt; each agent's own definition already has them.
+- **Trimmed SessionStart text and command descriptions**: saves ~400–550 tokens in every session.
+
+### Model Assignments
+
+Opus 5.5 costs only about twice as much as Sonnet 5, so three roles where mistakes cost the most moved up a tier:
+
+- **reviewer: sonnet → opus**. The reviewer decides whether each builder task passes, and since 0.9.0
+  it also runs the structural-quality and architect-compliance checks. A missed problem ships, and a
+  wrongly blocking finding costs a fresh Opus builder plus another review.
+- **scout: haiku → sonnet**. Scout findings go straight into builder prompts on complex tasks, so
+  wrong paths or conventions mislead the most expensive agent on the hardest work. Scout runs are
+  short, so the extra cost is small.
+- **merger: sonnet → opus**. Mistakes in AI-resolved conflicts don't show up anywhere, and nothing
+  reviews the merge afterwards. The merger runs rarely.
+
+### Fixes
+
+- The `tester` agent now commits its own test files. The commit step used to come only from the
+  dispatch template, so it disappeared when the template was shortened.
+- Delegated mode no longer says to *resume* a builder to fix security findings. Builders are never
+  reused, so it now spawns a fresh worktree builder and merges its branch.
+- Team mode no longer asks for worktree isolation when fixing security findings (team mode doesn't
+  support it).
+- Mode files refer to `PLUGIN_ROOT`, which is defined in the build skill's Variables. The
+  `${CLAUDE_PLUGIN_ROOT}` variable isn't filled in when a file is opened with Read.
+- New tests: manifest models must match agent frontmatter, and the Playwright/Frontend Design blocks
+  in delegated and team mode must stay identical.
+
+---
+
 ## 0.9.0
 
 ### Reviewer: Structural-Quality Enforcement

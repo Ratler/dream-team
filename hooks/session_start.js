@@ -13,38 +13,16 @@ const path = require('path');
 const PLUGIN_ROOT = process.env.CLAUDE_PLUGIN_ROOT || path.join(__dirname, '..');
 
 function buildContext() {
-  const guide = `You have dream-team installed.
-
-Dream Team provides structured planning and execution for development projects across three tiers.
+  const guide = `You have dream-team installed — structured planning and execution for development projects.
 
 **Workflow**: brainstorm → spec → build
+1. /dream-team:plan <prompt> — interactive brainstorming. Produces no files; recommends an execution tier.
+2. Write the spec (after brainstorming): /dream-team:spec-sequential (cheapest, single session) | /dream-team:spec-delegated (dispatches sub-agents) | /dream-team:spec-team (parallel Claude instances, highest cost).
+3. /dream-team:build <path-to-spec> — executes the spec using the mode in its frontmatter.
 
-**Step 1 — Brainstorm**:
-- /dream-team:plan <prompt> — Interactive brainstorming session. Explores the codebase, asks clarifying questions, proposes approaches, validates the task breakdown. Produces no files. Recommends an execution tier at the end.
+Ad-hoc: /dream-team:debug <issue> — systematic debugging, standalone.
 
-**Step 2 — Write Spec** (run after brainstorming):
-- /dream-team:spec-sequential — Write a sequential spec. Cheapest. Single-session, tasks run one at a time.
-- /dream-team:spec-delegated — Write a delegated spec. Dispatches specialized sub-agents (builder, researcher, etc.).
-- /dream-team:spec-team — Write a team spec. Spawns separate Claude instances that collaborate. Most powerful, highest cost.
-
-**Step 3 — Build**:
-- /dream-team:build <path-to-spec> — Reads a spec file, detects mode from frontmatter, executes using the appropriate strategy.
-
-**Ad-hoc Commands** (standalone, not part of the workflow):
-- /dream-team:debug <issue> — Systematic debugging session. Reproduces issue, investigates root cause, applies targeted fix, verifies resolution. Uses Playwright MCP for frontend debugging when available.
-
-**Available Agents** (for delegated and team modes):
-- builder: writes code, implements features with TDD (opus)
-- researcher: read-only exploration and context gathering (sonnet)
-- architect: design decisions and structural recommendations (opus)
-- reviewer: qualitative code review with severity categories, plus a structural-quality pass (simplification, file size, spaghetti, boundaries, architect-design compliance) (sonnet)
-- security-reviewer: proactive security audit with structured checklist (opus)
-- tester: writes and runs tests, TDD workflow (sonnet)
-- validator: final mechanical pass/fail verification (haiku)
-- debugger: systematic debugging, reproduces and fixes issues (opus)
-- docs: produces and updates project documentation after code is written (sonnet)
-- scout: fast pre-build reconnaissance of file structure and conventions (haiku)
-- merger: integrates builder worktree branches with tiered conflict resolution (sonnet)`;
+Delegated/team builds use specialized agents (builder, researcher, architect, reviewer, security-reviewer, tester, validator, debugger, docs, scout, merger) — see the Agent tool's available agent types for their descriptions.`;
 
   return guide;
 }

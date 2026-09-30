@@ -171,21 +171,49 @@ test('spec-team mentions Design Direction', () => {
 // --- Build skill ---
 
 const buildSkill = readFile('skills/build/SKILL.md');
-
-test('build skill mentions frontend-design-guidelines.md', () => {
-  assert(buildSkill.includes('frontend-design-guidelines.md'), 'missing guidelines template reference');
-});
+const modeSequential = readFile('skills/build/modes/sequential.md');
+const modeDelegated = readFile('skills/build/modes/delegated.md');
+const modeTeam = readFile('skills/build/modes/team.md');
 
 test('build skill mentions frontend-design in frontmatter parsing', () => {
   assert(buildSkill.includes('frontend-design'), 'missing frontend-design reference');
 });
 
-test('build skill has Frontend Design Instructions section', () => {
-  assert(buildSkill.includes('### Frontend Design Instructions'), 'missing Frontend Design Instructions section');
+test('build skill loads per-mode strategy files', () => {
+  assert(buildSkill.includes('modes/') || buildSkill.includes('MODE_DIR'), 'missing mode strategy file reference');
 });
 
-test('build skill frontend-design injection is builder-only', () => {
-  assert(buildSkill.includes('every **builder** agent dispatch prompt'), 'not builder-only');
+test('sequential mode reads frontend-design-guidelines.md directly', () => {
+  assert(modeSequential.includes('frontend-design-guidelines.md'), 'missing guidelines template reference');
+});
+
+test('delegated and team modes have Frontend Design Instructions section', () => {
+  assert(modeDelegated.includes('## Frontend Design Instructions'), 'delegated missing Frontend Design Instructions section');
+  assert(modeTeam.includes('## Frontend Design Instructions'), 'team missing Frontend Design Instructions section');
+});
+
+test('delegated and team frontend-design injection is builder-only', () => {
+  assert(modeDelegated.includes('every **builder** agent dispatch prompt'), 'delegated not builder-only');
+  assert(modeTeam.includes('every **builder** agent dispatch prompt'), 'team not builder-only');
+});
+
+test('dispatch blocks tell the builder to Read the guidelines (not paste them)', () => {
+  for (const [name, content] of [['delegated', modeDelegated], ['team', modeTeam]]) {
+    assert(content.includes('frontend-design-guidelines.md'), `${name} missing guidelines reference`);
+    assert(!content.includes('<paste the full content of templates/frontend-design-guidelines.md here>'), `${name} still pastes full guidelines`);
+  }
+});
+
+test('delegated and team Playwright/Frontend Design blocks stay in sync', () => {
+  const tail = (content) => content.slice(content.indexOf('## Playwright Instructions'));
+  assert(tail(modeDelegated) === tail(modeTeam), 'Playwright/Frontend Design sections differ between delegated.md and team.md');
+});
+
+test('mode files do not use ${CLAUDE_PLUGIN_ROOT} (not expanded when read via Read tool)', () => {
+  for (const [name, content] of [['sequential', modeSequential], ['delegated', modeDelegated], ['team', modeTeam]]) {
+    assert(!content.includes('${CLAUDE_PLUGIN_ROOT}'), `${name} uses unexpanded \${CLAUDE_PLUGIN_ROOT}`);
+  }
+  assert(buildSkill.includes('PLUGIN_ROOT: `${CLAUDE_PLUGIN_ROOT}`'), 'build skill missing PLUGIN_ROOT variable');
 });
 
 // --- Agents ---

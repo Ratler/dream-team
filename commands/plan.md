@@ -1,5 +1,5 @@
 ---
-description: "Start here — brainstorm and plan a new feature or task through interactive conversation"
+description: "Brainstorm and plan a feature"
 ---
 
 If no arguments were provided, stop immediately and tell the user: "Usage: /dream-team:plan <describe what you want to build>". Do not proceed.

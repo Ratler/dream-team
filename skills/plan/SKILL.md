@@ -70,13 +70,14 @@ If something is off, go back and rework it. Do not barrel forward past disagreem
 After the plan is solid, ask these questions (one per message):
 
 1. **Design direction** — Only ask this if the work involves a frontend, UI, or web interface. For backend-only work, skip this and default to `frontend-design: false`.
-   - Ask: "What aesthetic direction fits your project?" and present these options (use the Aesthetic Direction Reference in `${CLAUDE_PLUGIN_ROOT}/templates/frontend-design-guidelines.md` for full descriptions):
-     - Minimal / Clean
-     - Editorial / Magazine
-     - Playful / Energetic
-     - Brutalist / Raw
-     - Luxury / Refined
+   - Ask: "What aesthetic direction fits your project?" and present these options:
+     - **Minimal / Clean** — generous whitespace, restrained palette, subtle type hierarchy; best for tools and professional SaaS
+     - **Editorial / Magazine** — dramatic typographic hierarchy, asymmetric layouts, full-bleed imagery; best for content-heavy sites
+     - **Playful / Energetic** — bold colors, rounded shapes, bouncy animations; best for consumer apps and creative tools
+     - **Brutalist / Raw** — exposed structure, monospaced type, stark contrast with one punch color; best for developer tools
+     - **Luxury / Refined** — elegant type, muted earth or jewel tones, subtle metallic accents; best for e-commerce and premium brands
      - Other (describe your own)
+   - More directions (Retro-Futuristic, Organic/Natural, Art Deco, Industrial, Soft/Pastel) are listed in the Aesthetic Direction Reference in `${CLAUDE_PLUGIN_ROOT}/templates/frontend-design-guidelines.md` — read that file only if the user wants more options; do not read it just to present the list above.
    - After the user picks, ask a brief follow-up: "Any specific preferences — color palette, dark/light mode, typography feel, visual references? Or should I surprise you?"
    - For greenfield frontend projects (no existing codebase), also ask about the framework and CSS approach (e.g., React + Tailwind, Vue 3 + CSS Modules, Next.js + Tailwind). For existing projects, note the detected stack from Phase 1.
    - Remember the design direction — the spec will record it in the `Design Direction` section and set `frontend-design: true`.

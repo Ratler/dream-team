@@ -1,5 +1,5 @@
 ---
-description: "Systematic debugging — reproduce the issue, investigate root cause, apply targeted fix, verify resolution"
+description: "Systematic debugging session"
 ---
 
 If no arguments were provided, stop immediately and tell the user: "Usage: /dream-team:debug <describe what's broken>". Do not proceed.

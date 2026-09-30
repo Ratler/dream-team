@@ -2,9 +2,9 @@
 name: scout
 description: >
   Use this agent for fast, cheap pre-build reconnaissance. Scans file structures,
-  identifies patterns and conventions, reports gotchas. Read-only — haiku model for
-  cost efficiency. Dispatched by the orchestrator before builders on complex tasks.
-model: haiku
+  identifies patterns and conventions, reports gotchas. Read-only — sonnet model, since
+  its findings steer builders on complex tasks. Dispatched by the orchestrator before builders on complex tasks.
+model: sonnet
 color: gray
 disallowedTools: Write, Edit, NotebookEdit, Task, Agent
 ---

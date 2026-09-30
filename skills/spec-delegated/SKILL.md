@@ -19,7 +19,7 @@ Convert the brainstorming conversation into a formal spec file for delegated exe
 ## What To Do
 
 1. Read the spec template at `${CLAUDE_PLUGIN_ROOT}/templates/spec-template.md` and the spec writing guide at `${CLAUDE_PLUGIN_ROOT}/templates/spec-writing-guide.md`. Follow the guide's filename format, ambiguity elimination, and git instructions.
-2. Read the available agent definitions at `${CLAUDE_PLUGIN_ROOT}/agents/*.md` to understand each agent's capabilities.
+2. Read the agent manifest at `${CLAUDE_PLUGIN_ROOT}/agents/MANIFEST.md` to understand each agent's capabilities. Do NOT read the full agent definition files (`agents/*.md`) — the manifest is sufficient for task assignment.
 3. Summarize the agreed plan from the conversation — confirm with the user before writing.
 4. Write the spec, filling in all sections from the brainstorming context.
 5. Set frontmatter `mode: delegated` and `spec-version: 1`.

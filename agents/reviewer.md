@@ -3,7 +3,7 @@ name: reviewer
 description: >
   Use this agent for qualitative code review against specs and coding standards.
   Categorizes issues by severity. Read-only — cannot modify files.
-model: sonnet
+model: opus
 color: yellow
 memory: project
 disallowedTools: Write, Edit, NotebookEdit, Task, Agent

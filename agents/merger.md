@@ -4,7 +4,7 @@ description: >
   Use this agent for branch integration in delegated mode. Merges builder worktree
   branches back into the feature branch with tiered conflict resolution. Dispatched
   by the orchestrator after builder completion and review approval.
-model: sonnet
+model: opus
 color: purple
 disallowedTools: Task, Agent
 ---
