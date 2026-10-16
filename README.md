@@ -20,6 +20,17 @@ See the [Agent Teams documentation](https://code.claude.com/docs/en/agent-teams)
 A terminal multiplexer like **tmux** or **iTerm2** is recommended, as agent teams spawn multiple Claude instances that benefit
 from separate panes/windows for monitoring.
 
+### Optional: Native task tools
+
+Claude Code's task tools (`TaskCreate`, `TaskUpdate`, `TaskList`, `TaskGet`) are off by default for current models
+(the Claude 5 family) and on for older ones. Dream Team works either way: without them, builds track tasks in the
+`specs/.build-state/` files through `bin/task-state.js`. To use the native task list (and the TaskCompleted hook)
+instead, enable them:
+
+```
+export CLAUDE_CODE_ENABLE_TODO_TOOLS=1
+```
+
 ### Optional: Playwright MCP
 
 If your specs set `playwright: true`, builder and tester agents will use Playwright to verify UI changes visually
@@ -141,12 +152,14 @@ Six JavaScript hooks run at key points in the workflow:
 - **Preflight team check** (PreToolUse hook) -- Blocks team-mode builds when `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS`
   is not enabled. Fires on every Skill tool call and only intercepts the build skill with a team-mode spec.
 - **TaskCompleted** -- Logs all task completions as JSON lines to `~/.claude/dream-team/logs/<project>.jsonl` for
-  per-project audit trails. Logging only — never blocks.
+  per-project audit trails. Logging only — never blocks. Fires only when the native task tools are enabled; otherwise
+  `bin/task-state.js complete` does the same work.
 - **Spec exists** (Stop hook) -- After a spec skill finishes, validates that a spec file was actually written to
   `specs/`.
 - **Spec sections** (Stop hook) -- Validates required sections for the declared mode, plus structural checks:
   unresolved `<if>` tags, missing Tests fields, dangling or circular dependencies, and invalid Skip Review For entries.
-- **Build complete** (Stop hook) -- After a build skill finishes, checks that all tasks reached the `completed` state.
+- **Build complete** (Stop hook) -- After a build skill finishes, checks that all tasks reached the `completed` state
+  (from the native task list, or from the build-state files for the current branch).
 
 ## Agents
 

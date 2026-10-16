@@ -67,7 +67,7 @@ If the state directory does not exist but `branch` does, fall back to git-histor
 
 ### Task Tracking
 
-Claude Code builds differ: some expose `TaskCreate`/`TaskUpdate`/`TaskList`/`TaskGet`, newer ones (e.g. 2.1.301) do not. Detect once, before creating any tasks:
+`TaskCreate`/`TaskUpdate`/`TaskList`/`TaskGet` are disabled by default for current models and only present when the user sets `CLAUDE_CODE_ENABLE_TODO_TOOLS=1` (or runs an older model). Detect once, before creating any tasks:
 
 1. Check your tool list for `TaskCreate`, `TaskUpdate`, and `TaskList`. If they are not listed, run `ToolSearch` with `select:TaskCreate,TaskUpdate,TaskList`.
 2. All three available → `TASK_TRACKING = native`. Follow the mode file as written; the TaskCompleted hook persists build state.
@@ -81,6 +81,7 @@ Claude Code builds differ: some expose `TaskCreate`/`TaskUpdate`/`TaskList`/`Tas
      <the agent's [agent-type: X] report, verbatim>
      REPORT
      ```
+   - **Final report** → add one line: "Task tracking: build-state files (set `CLAUDE_CODE_ENABLE_TODO_TOOLS=1` to use Claude Code's native task tools)."
    - **Every agent dispatch prompt** → append: "Task tools (TaskGet/TaskUpdate) are unavailable in this session — do not call them. Everything you need is in this prompt. Return your `[agent-type: <type>]` report as your final message."
 
 ### Build State
