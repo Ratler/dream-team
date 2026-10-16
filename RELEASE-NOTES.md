@@ -1,5 +1,49 @@
 # Release Notes
 
+## 0.11.0
+
+### Claude Code 2.1.301 Compatibility
+
+Newer Claude Code builds changed two things every build mode relied on. Dream Team now detects both and
+adapts, and nothing changes on setups that still have the old behaviour.
+
+- **Implicit agent teams**: on newer builds there is no `TeamCreate`/`TeamDelete`. The session has one
+  implicit team, and named `Agent` spawns are its teammates. Team-mode pre-flight now accepts either an
+  explicit team (`TeamCreate`) or the implicit one, and only calls `TeamDelete` when it created the team
+  itself. The `spec-team` skill no longer refuses when `TeamCreate` is missing. (#5, thanks @tomassommar)
+- **Implicit-team worktrees**: implicit teammates are `Agent` spawns, so the builder and debugger
+  `isolation: "worktree"` frontmatter applies to them and can't be switched off. Team mode now tracks
+  whether the team is explicit or implicit. For implicit teams, builders commit inside their worktree,
+  the reviewer reviews that branch, and the orchestrator merges it after approval, with the `merger`
+  agent handling conflicts. A fix-round builder starts by fast-forwarding onto the previous builder's
+  unmerged branch. Explicit teams keep committing after each builder completes.
+- **Task tools off by default**: `TaskCreate`/`TaskUpdate`/`TaskList`/`TaskGet` are disabled by default
+  for current models (Claude 5 family) and enabled for older ones. The build skill now checks for them
+  at start. If they are missing, the `specs/.build-state/` files are the task list and the new
+  `bin/task-state.js` CLI updates them: `start`, `complete` (agent report on stdin), `commit <task-id>
+  <sha>` and `next`. `complete` does what the TaskCompleted hook does (state file, audit log, markdown
+  table formatting); that logic now lives in `lib/task-completion.js` and is shared by both. All eleven
+  agents return their `[agent-type: X]` report as their final message when `TaskUpdate` isn't available.
+  The build-complete Stop hook falls back to the build state for the current branch. To use the native
+  task tools instead, set `CLAUDE_CODE_ENABLE_TODO_TOOLS=1` (see the README).
+
+### Fixes
+
+- **Worktree cleanup deleted unmerged work**: `cleanup_worktrees.js` runs as a build-skill Stop hook,
+  which fires every time the orchestrator ends a turn, including mid-build while it waits for agents.
+  It removed every clean worktree and force-deleted its branch. A builder that has committed leaves a
+  clean worktree, so reviewed-but-unmerged branches could be lost. This affected delegated mode as well
+  as team mode. A clean worktree is now removed only once its HEAD is merged into the main checkout.
+- **Markdown formatter swept in unrelated edits**: the TaskCompleted formatter ran
+  `git add <file> && git commit -m "style: format markdown tables"`, which also committed any
+  uncommitted edits to that file. It now skips files that already have uncommitted changes. Its test
+  ran against the real repository and could commit work in progress during `make test`; it now runs in
+  a throwaway repo.
+- New tests for the `task-state.js` CLI, the build-state fallback in the build-complete hook, worktrees
+  with unmerged commits, and the formatter's dirty-file skip.
+
+---
+
 ## 0.10.0
 
 ### Token Optimization
