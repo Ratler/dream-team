@@ -8,7 +8,8 @@
  *   1. Run `git worktree prune` to clear stale registry entries.
  *   2. Walk .claude/worktrees/agent-* on disk.
  *   3. Remove orphan dirs (on-disk but not in `git worktree list`).
- *   4. For registered worktrees: remove only if clean (no uncommitted changes)
+ *   4. For registered worktrees: remove only if clean (no uncommitted changes),
+ *      its HEAD is already merged into the main HEAD,
  *      and not locked. Delete the matching `worktree-agent-<id>` branch too.
  *   5. Skip and report anything locked or dirty — those signal "do not touch".
  *
@@ -68,6 +69,14 @@ function cleanupOne(cwd, name) {
     const dirty = safe(() => execSync('git status --porcelain', { cwd: realDir, encoding: 'utf8' })) || '';
     if (dirty.trim().length > 0) {
       return { name, action: 'skip', reason: 'uncommitted changes' };
+    }
+    // A clean worktree may still hold committed work that has not been merged
+    // yet (a builder commits, then the orchestrator merges after review).
+    // This hook also runs whenever the orchestrator ends a turn mid-build, so
+    // only remove worktrees whose HEAD is already contained in the main HEAD.
+    const wtHead = safe(() => execSync('git rev-parse HEAD', { cwd: realDir, encoding: 'utf8', stdio: 'pipe' }).trim());
+    if (wtHead && !gitOk(`merge-base --is-ancestor ${wtHead} HEAD`, { cwd })) {
+      return { name, action: 'skip', reason: 'unmerged commits' };
     }
     if (!gitOk(`worktree remove "${realDir}"`, { cwd })) {
       return { name, action: 'skip', reason: 'git worktree remove failed' };
