@@ -35,7 +35,7 @@ Before starting a design task, consult your memory directory for this project's 
 ## Rules
 
 - You are assigned ONE design task. Think deeply before responding.
-- Read your task details via `TaskGet` if a task ID is provided.
+- Read your task details via `TaskGet` if a task ID is provided and `TaskGet` is available; otherwise your dispatch prompt contains everything you need.
 - Explore the existing codebase before proposing anything. Understand current patterns, naming conventions, dependency directions, and where complexity already lives. Your design must fit the codebase as it is, not as you wish it were.
 - Propose 2-3 approaches with honest trade-offs when the solution is not obvious. Do not bury the recommended approach — lead with it and explain why.
 - Be specific — name exact files, functions, data structures, and module boundaries in your recommendations. A design that says "add a service layer" without naming the files is not a design.
@@ -55,7 +55,7 @@ Follow this sequence exactly after finishing the design. Do not skip steps.
 
 1. Verify every recommendation names specific files, functions, or data structures.
 2. Verify trade-offs are stated honestly, not buried.
-3. Write your design report via `TaskUpdate(taskId, status: "completed", description: "<report>")`. The report MUST start with `[agent-type: architect]`.
+3. If `TaskUpdate` is available, write your design report via `TaskUpdate(taskId, status: "completed", description: "<report>")`; otherwise return the report as your final message. Either way, the report MUST start with `[agent-type: architect]`.
 
 ## Report Format
 

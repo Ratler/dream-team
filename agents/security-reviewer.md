@@ -31,7 +31,7 @@ These are the mistakes that waste the most time. If you catch yourself doing any
 ## Rules
 
 - You perform ONE security review at a time.
-- Read your task details via `TaskGet` if a task ID is provided.
+- Read your task details via `TaskGet` if a task ID is provided and `TaskGet` is available; otherwise your dispatch prompt contains everything you need.
 - Read ALL changed files on the feature branch — not just the ones builders mentioned. Security bugs hide in the files nobody thought to review.
 - Work through the **entire** Security Checklist below on every review. Do not skip categories, even if they seem irrelevant — document "not applicable" rather than silently skipping.
 - Categorize every finding as **Critical**, **Important**, or **Minor**.
@@ -125,7 +125,7 @@ Follow this sequence exactly after finishing the security review. Do not skip st
 1. Verify you worked through all 7 checklist categories and documented each.
 2. Verify every finding has a file:line reference and a concrete fix.
 3. Verify you read every changed file on the branch, not just the ones mentioned by builders.
-4. Write your security report via `TaskUpdate(taskId, status: "completed", description: "<report>")`. The report MUST start with `[agent-type: security-reviewer]`.
+4. If `TaskUpdate` is available, write your security report via `TaskUpdate(taskId, status: "completed", description: "<report>")`; otherwise return the report as your final message. Either way, the report MUST start with `[agent-type: security-reviewer]`.
 
 ## Report Format
 

@@ -41,8 +41,9 @@ Agent spawning has real cost — each sub-agent consumes tokens for context load
 - **Based on `mode`, read the matching strategy file — `MODE_DIR/sequential.md`, `MODE_DIR/delegated.md`, or `MODE_DIR/team.md` — and follow it.** Do NOT read the other two mode files; they do not apply to this build. Mode files are read with the Read tool, so they refer to the plugin root as `PLUGIN_ROOT` (the resolved path above) and to `AGENT_MANIFEST` by name.
 - The `playwright` and `frontend-design` frontmatter flags are handled inside the mode strategy file — follow its instructions for when to apply the Playwright and Frontend Design blocks. If a flag is `false` or missing, do NOT mention Playwright or frontend design to agents.
 - **Create a feature branch** before starting any work (see Git Workflow below). After creating the branch, write `branch: feat/<spec-name>` into the spec file's frontmatter to mark the build as started.
-- Use TaskCreate to register every task from the spec's `## Step by Step Tasks` section.
-- Use TaskUpdate with `addBlockedBy` to set dependencies per each task's `Depends On` field.
+- **Detect task tracking** (see Task Tracking below) and record `TASK_TRACKING` as `native` or `state-files`.
+- Initialize build state (see Build State below).
+- `native`: use TaskCreate to register every task from the spec's `## Step by Step Tasks` section, and TaskUpdate with `addBlockedBy` to set dependencies per each task's `Depends On` field. `state-files`: the task state files written at build start are the task list — nothing more to register.
 - Execute tasks according to the mode.
 - After all tasks complete: run `## Validation Commands` and verify `## Acceptance Criteria`.
 - Present a final report.
@@ -53,16 +54,35 @@ If the spec's frontmatter contains a `branch` field, this is a resumed build:
 1. Check out the existing branch (do not create a new one).
 2. Derive the state directory path from the spec filename (strip date prefix and `.md` extension, e.g., `specs/2026-03-14-my-feature.md` → `specs/.build-state/my-feature`).
 3. Read all task state files from the state directory (each `<task-id>.json` file).
-4. Use TaskCreate to re-create tasks, setting their status from the state files:
+4. `native` only (in `state-files` mode the state files already are the task list — skip to step 6): use TaskCreate to re-create tasks, setting their status from the state files:
    - `"completed"` tasks: create with status completed. Set the task description to the saved `description` field from the state file (this preserves agent reports and context).
    - `"in_progress"` tasks: create with status in_progress. Set the description to the saved description (if any) plus a note: `"RESUMED: This task was interrupted in a previous session. Check git log and changed files to determine what was completed before continuing."`
    - `"pending"` tasks: create normally.
-5. Set dependencies via TaskUpdate `addBlockedBy` per each task's `dependsOn` field from the state files.
+5. `native` only: set dependencies via TaskUpdate `addBlockedBy` per each task's `dependsOn` field from the state files.
 6. Skip dispatching/executing completed tasks.
 7. For in_progress tasks: assess what was done (check git log, read files on disk) and continue from there rather than restarting from scratch.
 8. For pending tasks: proceed normally according to the mode.
 
 If the state directory does not exist but `branch` does, fall back to git-history-based resume: check out the branch, inspect commits with `git log`, and infer progress from what files exist and what tests pass.
+
+### Task Tracking
+
+`TaskCreate`/`TaskUpdate`/`TaskList`/`TaskGet` are disabled by default for current models and only present when the user sets `CLAUDE_CODE_ENABLE_TODO_TOOLS=1` (or runs an older model). Detect once, before creating any tasks:
+
+1. Check your tool list for `TaskCreate`, `TaskUpdate`, and `TaskList`. If they are not listed, run `ToolSearch` with `select:TaskCreate,TaskUpdate,TaskList`.
+2. All three available → `TASK_TRACKING = native`. Follow the mode file as written; the TaskCompleted hook persists build state.
+3. Otherwise → `TASK_TRACKING = state-files`. The build-state files are the task list, and `PLUGIN_ROOT/bin/task-state.js` replaces the Task* tools. Wherever this skill or the mode file says:
+   - **TaskCreate / `addBlockedBy`** → nothing to do; the task state files from On Build Start hold names, agent types, and `dependsOn`.
+   - **Mark `in_progress` via TaskUpdate** → `node PLUGIN_ROOT/bin/task-state.js SPEC_PATH start <task-id>`
+   - **TaskList** → `node PLUGIN_ROOT/bin/task-state.js SPEC_PATH next` (lists ready, blocked, and in-progress tasks)
+   - **Mark `completed`** (an agent returned, or you finished the task yourself) → pipe the agent's final report into `complete`. This replaces the TaskCompleted hook, which never fires without the Task* tools:
+     ```
+     node PLUGIN_ROOT/bin/task-state.js SPEC_PATH complete <task-id> <<'REPORT'
+     <the agent's [agent-type: X] report, verbatim>
+     REPORT
+     ```
+   - **Final report** → add one line: "Task tracking: build-state files (set `CLAUDE_CODE_ENABLE_TODO_TOOLS=1` to use Claude Code's native task tools)."
+   - **Every agent dispatch prompt** → append: "Task tools (TaskGet/TaskUpdate) are unavailable in this session — do not call them. Everything you need is in this prompt. Return your `[agent-type: <type>]` report as your final message."
 
 ### Build State
 
@@ -70,22 +90,25 @@ Build state is persisted to disk so builds can resume from a fresh session. Stat
 
 #### On Build Start (new build, not resume)
 
-After creating the feature branch and before creating tasks:
+After creating the feature branch and before creating tasks (required in both `TASK_TRACKING` modes — in `state-files` mode these files are the only task list):
 1. Derive the state directory path from the spec filename.
 2. Create the directory and write `_meta.json` with: `specFile` (spec path), `branch` (feature branch name), `mode` (from frontmatter), `startedAt` (current ISO timestamp), `lastUpdated` (same as startedAt), `compactions` (0).
 3. For each task in the spec's `## Step by Step Tasks` section, write a `<task-id>.json` file with: `name` (task name), `status` `"pending"`, `agentType` (from spec Agent Type field, or `"sequential"` for sequential mode), `startedAt` null, `completedAt` null, `lastUpdated` (current ISO timestamp), `description` null, `commitSha` null, `filesChanged` [], `dependsOn` (array of task IDs from the Depends On field).
 
 #### On Task Completion
 
-The TaskCompleted hook automatically updates the task state file to `"completed"` with the agent's description, timestamp, and commit info. You do NOT need to manually update state files for task status transitions — the hook handles it.
+- `native`: the TaskCompleted hook automatically updates the task state file to `"completed"` with the agent's description, timestamp, and commit info. You do NOT need to manually update state files for task status transitions — the hook handles it.
+- `state-files`: run `task-state.js complete` as described in Task Tracking. It does what the hook does (state file, audit log, markdown table formatting).
 
-After committing code, update the completed task's state file: set `commitSha` to the commit SHA and `filesChanged` to the list of files in that commit.
+After committing code, record the commit on the task: `node PLUGIN_ROOT/bin/task-state.js SPEC_PATH commit <task-id> <sha>` (sets `commitSha` and `filesChanged`).
 
 ## Git Workflow
 
 **Delegated mode**: Builder and debugger agents running in worktrees MUST commit their own changes inside the worktree before marking the task complete. The orchestrator then merges the worktree branch back into the feature branch. Read-only agents do not commit.
 
-**Team mode**: Agents do NOT touch git. All git operations are handled by the orchestrator (teammates have no worktree isolation).
+**Team mode, explicit team** (`TeamCreate`): Agents do NOT touch git. All git operations are handled by the orchestrator (teammates have no worktree isolation).
+
+**Team mode, implicit team**: builder and debugger teammates run in worktrees (their agent definitions set `isolation: "worktree"`), so they commit inside the worktree like delegated mode, and the orchestrator merges the worktree branch after review approval (see the team mode file's Worktree Merge). All other agents work in the main directory and do not touch git.
 
 ### Branch
 

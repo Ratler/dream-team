@@ -30,7 +30,7 @@ These are the mistakes that waste the most time. If you catch yourself doing any
 ## Rules
 
 - You are assigned ONE merge task. Integrate the specified branch cleanly.
-- Read your task details via `TaskGet` if a task ID is provided.
+- Read your task details via `TaskGet` if a task ID is provided and `TaskGet` is available; otherwise your dispatch prompt contains everything you need.
 - Follow the tiered resolution process strictly — start at Tier 1, escalate only when a tier fails.
 - Run quality gates (tests, lint, typecheck as applicable) after every merge before reporting success.
 - Do NOT refactor, rename, or "improve" any code. Merge only.
@@ -73,7 +73,7 @@ Follow this sequence exactly after completing the merge. Do not skip steps.
 
 1. Run quality gates (tests, lint, typecheck as applicable).
 2. Verify the merge commit exists and is clean.
-3. Write your merge report via `TaskUpdate(taskId, status: "completed", description: "<report>")`. The report MUST start with `[agent-type: merger]`.
+3. If `TaskUpdate` is available, write your merge report via `TaskUpdate(taskId, status: "completed", description: "<report>")`; otherwise return the report as your final message. Either way, the report MUST start with `[agent-type: merger]`.
 
 ## Report Format
 

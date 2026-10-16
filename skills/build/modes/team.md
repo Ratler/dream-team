@@ -7,14 +7,14 @@ You are the orchestrator of a dynamic agent team. You NEVER write code directly 
 ## Pre-flight
 
 1. **STOP if agent teams are not enabled.** Agent teams require `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1`. How the team is exposed depends on the Claude Code version — treat teams as available if EITHER holds:
-   - **Explicit team**: the `TeamCreate` tool is callable (check the tool list, or `ToolSearch` with `select:TeamCreate,TeamDelete` for deferred tools). Create the team with `TeamCreate`, spawn teammates into it, and delete it with `TeamDelete` at Completion.
-   - **Implicit team**: `TeamCreate` does not exist, but the `Agent` tool's `team_name` parameter is documented as deprecated/ignored because the session has a single implicit team. Skip `TeamCreate`/`TeamDelete` — spawn teammates with `Agent({ name, subagent_type, model, prompt })`; named spawns join the implicit team. `SendMessage`, `ListAgents`, `TaskStop`, and `TaskCreate`/`TaskList` provide messaging, roster, retirement, and the shared task list.
+   - **Explicit team** (`TEAM_KIND = explicit`): the `TeamCreate` tool is callable (check the tool list, or `ToolSearch` with `select:TeamCreate,TeamDelete` for deferred tools). Create the team with `TeamCreate`, spawn teammates into it, and delete it with `TeamDelete` at Completion.
+   - **Implicit team** (`TEAM_KIND = implicit`): `TeamCreate` does not exist, but the `Agent` tool's `team_name` parameter is documented as deprecated/ignored because the session has a single implicit team. Skip `TeamCreate`/`TeamDelete` — spawn teammates with `Agent({ name, subagent_type, model, prompt })`; named spawns join the implicit team. `SendMessage`, `ListAgents`, and `TaskStop` provide messaging, roster, and retirement; the task list comes from the build skill's Task Tracking. Builder and debugger teammates run in their own git worktree here (their agent definitions set `isolation: "worktree"` and the `Agent` tool cannot turn it off) — follow Worktree Merge (Implicit Team) below for their output.
 
    If neither holds, STOP immediately. Tell the user: "This spec uses mode: team, which requires agent teams. Set CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1 in your environment and restart, or re-spec with `/dream-team:spec-delegated` as an alternative." Do NOT fall back to delegated mode. Do NOT proceed.
 2. Create the feature branch (see Git Workflow).
 3. Read AGENT_MANIFEST (`PLUGIN_ROOT/agents/MANIFEST.md`) for each agent's dispatch parameters and capabilities. Do NOT read the full agent definition files (`agents/*.md`) — each one is loaded automatically as its agent's system prompt at spawn time.
 4. Read `## Team Configuration` for `Display Mode`, `Coordinate Only`, `Max Active Agents` (default 6), and `Rotation After` (default 3).
-5. Create all tasks via TaskCreate. Set dependencies per spec.
+5. Register all tasks per the build skill's Task Tracking (`native`: TaskCreate with dependencies per spec; `state-files`: the build-state files are the task list).
 6. **Agent count validation:** Count distinct **Agent Type** values across all tasks — this is the number of ROLES, not agents to spawn. Total concurrent agents MUST NOT exceed `Max Active Agents`. Ignore "Assigned To" labels and numbered suffixes — they are cosmetic. Schedule by **Agent Type** only.
 7. Ask the user: "This build has X tasks across Y distinct agent types (list them). Max concurrent agents is set to N. OK to proceed, or would you like to adjust?" Wait for confirmation before spawning any agents.
 8. If `Coordinate Only: true`, enable delegate mode (Shift+Tab) so you only coordinate.
@@ -30,7 +30,9 @@ You are the orchestrator of a dynamic agent team. You NEVER write code directly 
 11. **Scheduling loop** — repeat until all tasks are complete:
     a. List all unblocked tasks. Sort: review tasks first, then others.
     b. For each unblocked task:
-       - **Builder/debugger → spawn fresh**: Never reuse via SendMessage. Team mode has no worktree isolation — commit after each builder completes (see Commit After Completion) and ensure parallel builders touch different files.
+       - **Builder/debugger → spawn fresh**: Never reuse via SendMessage. Ensure parallel builders touch different files.
+         - `TEAM_KIND = explicit`: no worktree isolation — commit after each builder completes (see Commit After Completion).
+         - `TEAM_KIND = implicit`: the builder runs in its own worktree. Add to its dispatch prompt: "You are running in your own git worktree. Commit your changes inside it as the last step of your Completion Protocol. Do not switch branches." Merge after review (see Worktree Merge (Implicit Team)).
        - **Read-only agents + docs → reuse if idle**: Same **Agent Type** match (ignore "Assigned To" labels). If no idle agent, spawn new if slot is free.
        - Pass `model` matching the Agent Dispatch Manifest. Include full task text, file paths, and acceptance criteria.
        - **No free slot → wait** for an agent to complete, then return to (a).
@@ -50,9 +52,9 @@ You are the orchestrator of a dynamic agent team. You NEVER write code directly 
 - **Read-only agents** (reviewer, researcher, validator, architect, security-reviewer, tester, docs): reuse idle instances before spawning new ones.
 - Multiple builders CAN run in parallel — but they must touch different files.
 
-## Commit After Completion
+## Commit After Completion (Explicit Team)
 
-Team mode teammates do NOT support `isolation: "worktree"` — all teammates work directly in the main directory. Committing immediately after each builder completes is the primary mechanism for preventing conflicts.
+Explicit-team teammates do NOT support `isolation: "worktree"` — all teammates work directly in the main directory. Committing immediately after each builder completes is the primary mechanism for preventing conflicts. With `TEAM_KIND = implicit`, use Worktree Merge (Implicit Team) for builder/debugger output instead; the docs agent still works in the main directory and is committed per this protocol.
 
 **Protocol:**
 1. After a builder/debugger task completes (and after review approval for builder tasks), check `git status` in the main working directory.
@@ -62,12 +64,24 @@ Team mode teammates do NOT support `isolation: "worktree"` — all teammates wor
 
 **Note:** Read-only agents (reviewer, validator, researcher, security-reviewer, architect) make no file changes, so no commit is needed after them.
 
+## Worktree Merge (Implicit Team)
+
+With `TEAM_KIND = implicit`, each builder/debugger works on its own worktree branch.
+
+**Protocol:**
+1. When the builder/debugger returns, identify its worktree path and branch from its result or `git worktree list`.
+2. If the worktree has uncommitted changes (`git -C <worktree> status --short`), commit them there: `git -C <worktree> add <changed-files> && git -C <worktree> commit -m "<type>(<scope>): <what changed>"`.
+3. Dispatch the review with the worktree path and branch. The reviewer reviews `git -C <worktree> diff <feature-branch>...HEAD` and the files in the worktree.
+4. After review approval, on the feature branch in the main directory: `git merge <worktree-branch> --no-ff -m "merge: <worktree-branch>"`. If the merge conflicts, `git merge --abort` and spawn a `merger` agent (model per AGENT_MANIFEST) with the source branch, target branch, and what the builder changed. If the merger cannot resolve it, escalate to the user.
+5. Fix-loop builders (after review feedback) are fresh spawns with fresh worktrees created from the feature branch, which does not contain the unmerged work. Give the fix builder the previous worktree branch and tell it to run `git merge --ff-only <previous-worktree-branch>` inside its worktree before fixing. Then repeat this protocol; merge only the approved branch.
+6. **Merge before dispatching a builder whose files depend on the merged work.** Parallel builders on disjoint files may run concurrently; merge each as it is approved.
+
 ## Review and Commit Workflow
 
 13. **MANDATORY: After every builder agent finishes a task that writes code, schedule a review task.** The builder does NOT move to its next task until the reviewer approves. (When an architect produced a design for the task, include that design output in the review task context so the reviewer can verify the implementation followed it.) Handle fix loops:
     - If reviewer reports Critical or Important issues: spawn a **fresh** builder agent and include the review feedback plus original task context. Do NOT reuse the previous builder. After fixes, schedule another review. Repeat up to `Max Retries` times.
     - If max retries exceeded: stop and escalate to the user.
-14. **After the reviewer approves a task, commit the changes immediately** (see Commit After Completion above). Agents do NOT touch git — only the orchestrator commits.
+14. **After the reviewer approves a task, integrate it immediately**: `TEAM_KIND = explicit` → commit (see Commit After Completion; agents do NOT touch git — only the orchestrator commits). `TEAM_KIND = implicit` → merge the worktree branch (see Worktree Merge (Implicit Team)).
 15. Research, architecture, and validation tasks do NOT need review. Read-only agents make no file changes — no commit needed.
 
 ## Plan Approval
@@ -82,7 +96,7 @@ Team mode teammates do NOT support `isolation: "worktree"` — all teammates wor
 
 ## Completion
 
-18. **Before dispatching the docs agent**: spawn a `security-reviewer` agent (model: opus) in a free slot to audit all files changed on the feature branch. Provide the list of changed files (`git diff --name-only main...HEAD`) and the spec's acceptance criteria. If Critical issues are found, spawn a **fresh** builder agent to fix them (no worktree isolation in team mode — commit after the fix per Commit After Completion). After fixes, commit and re-run the security review. Commit security fixes before proceeding to documentation.
+18. **Before dispatching the docs agent**: spawn a `security-reviewer` agent (model: opus) in a free slot to audit all files changed on the feature branch. Provide the list of changed files (`git diff --name-only main...HEAD`) and the spec's acceptance criteria. If Critical issues are found, spawn a **fresh** builder agent to fix them (`TEAM_KIND = explicit`: commit after the fix per Commit After Completion; `TEAM_KIND = implicit`: merge its worktree branch per Worktree Merge (Implicit Team)). After fixes, commit and re-run the security review. Commit security fixes before proceeding to documentation.
 19. **After the security review is complete (and any security fixes are committed), spawn a `docs` agent** (model: sonnet) in a free slot to produce documentation. Provide: the spec's `## Documentation Requirements` section, the list of files changed on the feature branch (`git diff --name-only main...HEAD`), and the spec's acceptance criteria. Commit the docs agent's changes immediately after it completes (same protocol as builder commits in team mode). Then proceed to the validator.
 20. After all tasks are complete: spawn a validator agent in a free slot for final verification.
 21. Clean up — no further messages to any agents. If you created the team with `TeamCreate`, delete it with `TeamDelete`; with an implicit team there is nothing to delete.

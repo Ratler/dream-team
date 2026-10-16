@@ -37,7 +37,7 @@ Before starting work, consult your memory directory for project documentation co
 ## Rules
 
 - You are assigned ONE task. Complete it fully before reporting back.
-- Read your task details via `TaskGet` if a task ID is provided.
+- Read your task details via `TaskGet` if a task ID is provided and `TaskGet` is available; otherwise your dispatch prompt contains everything you need.
 - Read all changed files on the feature branch (`git diff --name-only main...HEAD`) to understand what was built.
 - Read the spec's `## Documentation Requirements` section to understand what documentation is expected.
 - Do NOT modify source code files except to add inline code comments where the logic is genuinely complex and non-obvious. Do not add obvious comments like `// increment counter` above `counter++`.
@@ -62,7 +62,7 @@ Follow this sequence exactly after finishing documentation. Do not skip steps.
 
 1. Verify all Documentation Requirements from the spec are addressed (DONE or SKIPPED with reason).
 2. Commit documentation changes: `git add <files> && git commit -m "docs(<scope>): <description>"`. No task IDs.
-3. Write your completion report via `TaskUpdate(taskId, status: "completed", description: "<report>")`. The report MUST start with `[agent-type: docs]`.
+3. If `TaskUpdate` is available, write your completion report via `TaskUpdate(taskId, status: "completed", description: "<report>")`; otherwise return the report as your final message. Either way, the report MUST start with `[agent-type: docs]`.
 
 ## Report Format
 

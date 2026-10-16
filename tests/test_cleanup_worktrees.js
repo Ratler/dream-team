@@ -82,6 +82,40 @@ test('removes registered+clean worktree and deletes its branch', () => {
   } finally { rm(dir); }
 });
 
+test('keeps clean worktree with unmerged commits and its branch', () => {
+  const dir = makeRepo();
+  try {
+    const wt = path.join(dir, '.claude', 'worktrees', 'agent-beef5678');
+    sh(`git worktree add -b worktree-agent-beef5678 "${wt}"`, dir);
+    fs.writeFileSync(path.join(wt, 'add.js'), 'module.exports = 1;');
+    sh('git add add.js && git commit -q -m "feat: add"', wt);
+
+    const r = runHook(dir);
+
+    assert(fs.existsSync(wt), 'worktree with unmerged commits must be kept');
+    const branches = sh('git branch --list worktree-agent-beef5678', dir).trim();
+    assert(branches.length > 0, 'branch with unmerged commits must be kept');
+    assert(r.message.includes('unmerged commits'), `message should explain: ${r.message}`);
+  } finally { rm(dir); }
+});
+
+test('removes clean worktree once its commits are merged', () => {
+  const dir = makeRepo();
+  try {
+    const wt = path.join(dir, '.claude', 'worktrees', 'agent-feed9abc');
+    sh(`git worktree add -b worktree-agent-feed9abc "${wt}"`, dir);
+    fs.writeFileSync(path.join(wt, 'mul.js'), 'module.exports = 2;');
+    sh('git add mul.js && git commit -q -m "feat: mul"', wt);
+    sh('git merge -q --no-ff -m merge worktree-agent-feed9abc', dir);
+
+    runHook(dir);
+
+    assert(!fs.existsSync(wt), 'merged worktree should be removed');
+    const branches = sh('git branch --list worktree-agent-feed9abc', dir).trim();
+    assert(branches.length === 0, `merged branch should be deleted, got: ${branches}`);
+  } finally { rm(dir); }
+});
+
 test('keeps locked worktrees', () => {
   const dir = makeRepo();
   try {

@@ -9,9 +9,13 @@
  * - Hook exits 0 when .md files are present (regardless of formatter availability)
  * - extractMdFiles correctly parses file paths from descriptions
  * - Non-existent .md files are skipped gracefully
+ * - Files with uncommitted changes are never formatted or committed
+ *
+ * The hook runs in a throwaway git repo: it commits formatting changes,
+ * and must never commit into this repository.
  */
 
-const { spawnSync } = require('child_process');
+const { spawnSync, execSync } = require('child_process');
 const fs = require('fs');
 const path = require('path');
 const os = require('os');
@@ -20,6 +24,7 @@ const hookScript = path.join(__dirname, '..', 'hooks', 'validate_task_completed.
 let passed = 0;
 let failed = 0;
 let tmpDir;
+let sandbox;
 
 function test(name, fn) {
   try {
@@ -41,6 +46,7 @@ function runHook(input, env) {
     DREAM_TEAM_LOG_DIR: tmpDir
   }, env || {});
   const result = spawnSync('node', [hookScript], {
+    cwd: sandbox,
     input: JSON.stringify(input),
     env: hookEnv,
     encoding: 'utf8'
@@ -67,6 +73,12 @@ function makeInput(overrides) {
 
 function setup() {
   tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'dream-team-fmt-test-'));
+  sandbox = path.join(tmpDir, 'repo');
+  fs.mkdirSync(path.join(sandbox, 'agents'), { recursive: true });
+  const root = path.join(__dirname, '..');
+  fs.copyFileSync(path.join(root, 'README.md'), path.join(sandbox, 'README.md'));
+  fs.copyFileSync(path.join(root, 'agents', 'docs.md'), path.join(sandbox, 'agents', 'docs.md'));
+  execSync('git init -q -b main && git config user.email t@example.invalid && git config user.name t && git add -A && git commit -q -m init', { cwd: sandbox });
 }
 
 function cleanup() {
@@ -142,7 +154,21 @@ try {
       `Expected formatter-related message for existing .md file, got: ${result.stderr}`);
   });
 
-  // 6. No files section at all — exits 0
+  // 6. Uncommitted .md file is skipped and nothing is committed
+  test('File with uncommitted changes is not formatted or committed', () => {
+    const file = path.join(sandbox, 'agents', 'docs.md');
+    fs.appendFileSync(file, '\n| a | bb |\n|---|---|\n| ccc | d |\n');
+    const before = execSync('git rev-parse HEAD', { cwd: sandbox, encoding: 'utf8' }).trim();
+    const result = runHook(makeInput({ task_description: '**Files changed**:\n- agents/docs.md — edited' }));
+    const after = execSync('git rev-parse HEAD', { cwd: sandbox, encoding: 'utf8' }).trim();
+    execSync('git checkout -q -- agents/docs.md', { cwd: sandbox });
+    assert(result.status === 0, `Expected exit 0, got ${result.status}`);
+    assert(before === after, 'hook must not commit a file with uncommitted changes');
+    const which = spawnSync('which', ['markdown-table-formatter']).status === 0;
+    if (which) assert(result.stderr.includes('uncommitted changes'), `Expected skip message, got: ${result.stderr}`);
+  });
+
+  // 7. No files section at all — exits 0
   test('Description without file list exits 0', () => {
     const input = makeInput({
       task_description: '[agent-type: reviewer]\n## Code Review\n**Status**: Approved\nEverything looks good.'

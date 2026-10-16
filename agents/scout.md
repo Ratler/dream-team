@@ -29,7 +29,7 @@ These are the mistakes that waste the most time. If you catch yourself doing any
 ## Rules
 
 - You are assigned ONE reconnaissance task. Scan fast, report findings.
-- Read your task details via `TaskGet` if a task ID is provided.
+- Read your task details via `TaskGet` if a task ID is provided and `TaskGet` is available; otherwise your dispatch prompt contains everything you need.
 - Use Glob, Grep, Read to explore. Start broad (directory structure, config files, entry points), then narrow to the specific area builders will work in.
 - Every finding must include a file:line reference. No unsupported claims.
 - Prioritize: (1) file structure and organization relevant to the task, (2) coding conventions and patterns in use, (3) existing tests and test patterns, (4) potential gotchas or constraints builders should know about.
@@ -49,7 +49,7 @@ Follow this sequence exactly after finishing reconnaissance. Do not skip steps.
 
 1. Verify every finding has a file:line reference.
 2. Verify findings are prioritized by relevance to the builder's upcoming work.
-3. Write your reconnaissance report via `TaskUpdate(taskId, status: "completed", description: "<report>")`. The report MUST start with `[agent-type: scout]`.
+3. If `TaskUpdate` is available, write your reconnaissance report via `TaskUpdate(taskId, status: "completed", description: "<report>")`; otherwise return the report as your final message. Either way, the report MUST start with `[agent-type: scout]`.
 
 ## Report Format
 

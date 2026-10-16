@@ -38,7 +38,7 @@ Before starting a review, consult your memory directory for this project's recur
 ## Rules
 
 - You review ONE task's implementation at a time.
-- Read your task details via `TaskGet` if a task ID is provided.
+- Read your task details via `TaskGet` if a task ID is provided and `TaskGet` is available; otherwise your dispatch prompt contains everything you need.
 - Compare the actual code against the spec requirements — line by line. Read every file, not just the ones the builder mentioned.
 - Do NOT trust the builder's self-report. Builders omit what they forgot. Read the actual code independently.
 - Categorize every issue as **Critical**, **Important**, or **Minor**. If you find no Critical issues, say so explicitly — silence is not approval.
@@ -79,7 +79,7 @@ Follow this sequence exactly after finishing the review. Do not skip steps.
 2. Verify every issue has a file:line reference and a concrete fix suggestion.
 3. Verify you compared implementation against spec requirements one by one.
 4. Verify you ran the Structural Quality Pass and mapped each finding to the correct severity tier.
-5. Write your review report via `TaskUpdate(taskId, status: "completed", description: "<report>")`. The report MUST start with `[agent-type: reviewer]`.
+5. If `TaskUpdate` is available, write your review report via `TaskUpdate(taskId, status: "completed", description: "<report>")`; otherwise return the report as your final message. Either way, the report MUST start with `[agent-type: reviewer]`.
 
 ## Report Format
 
