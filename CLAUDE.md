@@ -67,6 +67,7 @@ Hooks are plain Node.js scripts that read stdin and write JSON to stdout:
 
 - Stop hooks in SKILL.md frontmatter appear to be working as of Claude Code 2.1.49 (previously broken — claude-code#19225). SessionStart hook in `hooks.json` works fine.
 - Background subagents cannot use Bash (auto-denied by permission handlers) — use foreground agents for git/node commands.
+- Team mode must work with both explicit teams (`TeamCreate`/`TeamDelete` tools, older Claude Code builds) and the implicit single team (newer builds: no `TeamCreate`, `Agent`'s `team_name` is deprecated/ignored, named `Agent` spawns are teammates). Never gate team mode on `TeamCreate` alone.
 - Team mode teammates do not support `isolation: "worktree"` — only delegated mode subagents (Agent/Task tool) get worktree isolation. In team mode, commit-after-completion and file-boundary separation are the isolation mechanisms.
 - Plugin manifest: omit empty string fields; they fail URL validation.
 - Instructions written as passive/conditional sidebars get ignored by Claude — make them structural numbered steps in the process flow.

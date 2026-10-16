@@ -16,7 +16,7 @@ Convert the brainstorming conversation into a formal spec file for team executio
 
 **Prerequisites:** This skill assumes `/dream-team:plan` has already been run in this session. If the conversation has no brainstorming context (no discussed requirements, no confirmed approach, no validated task breakdown), stop and tell the user: "No brainstorming context found. Run `/dream-team:plan <prompt>` first to explore requirements and design."
 
-**Requires:** `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS` enabled in settings.
+**Requires:** `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS` enabled in settings. Teams count as available when either the `TeamCreate` tool exists (older Claude Code builds) or the `Agent` tool's `team_name` parameter is marked deprecated/ignored because the session has a single implicit team (newer builds). Do not refuse to write the spec just because `TeamCreate` is missing.
 
 ## What To Do
 

@@ -6,7 +6,11 @@ You are the orchestrator of a dynamic agent team. You NEVER write code directly 
 
 ## Pre-flight
 
-1. **STOP if agent teams are not enabled.** Check whether `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1` is set by attempting to use TeamCreate. If teams are not available, STOP immediately. Tell the user: "This spec uses mode: team, which requires agent teams. Set CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1 in your environment and restart, or re-spec with `/dream-team:spec-delegated` as an alternative." Do NOT fall back to delegated mode. Do NOT proceed.
+1. **STOP if agent teams are not enabled.** Agent teams require `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1`. How the team is exposed depends on the Claude Code version — treat teams as available if EITHER holds:
+   - **Explicit team**: the `TeamCreate` tool is callable (check the tool list, or `ToolSearch` with `select:TeamCreate,TeamDelete` for deferred tools). Create the team with `TeamCreate`, spawn teammates into it, and delete it with `TeamDelete` at Completion.
+   - **Implicit team**: `TeamCreate` does not exist, but the `Agent` tool's `team_name` parameter is documented as deprecated/ignored because the session has a single implicit team. Skip `TeamCreate`/`TeamDelete` — spawn teammates with `Agent({ name, subagent_type, model, prompt })`; named spawns join the implicit team. `SendMessage`, `ListAgents`, `TaskStop`, and `TaskCreate`/`TaskList` provide messaging, roster, retirement, and the shared task list.
+
+   If neither holds, STOP immediately. Tell the user: "This spec uses mode: team, which requires agent teams. Set CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1 in your environment and restart, or re-spec with `/dream-team:spec-delegated` as an alternative." Do NOT fall back to delegated mode. Do NOT proceed.
 2. Create the feature branch (see Git Workflow).
 3. Read AGENT_MANIFEST (`PLUGIN_ROOT/agents/MANIFEST.md`) for each agent's dispatch parameters and capabilities. Do NOT read the full agent definition files (`agents/*.md`) — each one is loaded automatically as its agent's system prompt at spawn time.
 4. Read `## Team Configuration` for `Display Mode`, `Coordinate Only`, `Max Active Agents` (default 6), and `Rotation After` (default 3).
@@ -81,7 +85,7 @@ Team mode teammates do NOT support `isolation: "worktree"` — all teammates wor
 18. **Before dispatching the docs agent**: spawn a `security-reviewer` agent (model: opus) in a free slot to audit all files changed on the feature branch. Provide the list of changed files (`git diff --name-only main...HEAD`) and the spec's acceptance criteria. If Critical issues are found, spawn a **fresh** builder agent to fix them (no worktree isolation in team mode — commit after the fix per Commit After Completion). After fixes, commit and re-run the security review. Commit security fixes before proceeding to documentation.
 19. **After the security review is complete (and any security fixes are committed), spawn a `docs` agent** (model: sonnet) in a free slot to produce documentation. Provide: the spec's `## Documentation Requirements` section, the list of files changed on the feature branch (`git diff --name-only main...HEAD`), and the spec's acceptance criteria. Commit the docs agent's changes immediately after it completes (same protocol as builder commits in team mode). Then proceed to the validator.
 20. After all tasks are complete: spawn a validator agent in a free slot for final verification.
-21. Clean up — no further messages to any agents.
+21. Clean up — no further messages to any agents. If you created the team with `TeamCreate`, delete it with `TeamDelete`; with an implicit team there is nothing to delete.
 
 ## Playwright Instructions (only if `playwright: true`)
 
