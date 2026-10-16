@@ -2,7 +2,10 @@
 'use strict';
 
 const { execSync } = require('child_process');
+const fs = require('fs');
+const os = require('os');
 const path = require('path');
+const { initBuildState, writeTask } = require('../lib/build-state');
 
 const hookPath = path.join(__dirname, '..', 'hooks', 'validate_build_complete.js');
 let passed = 0;
@@ -41,8 +44,19 @@ function runHook(stdinData) {
 
 console.log('Testing validate_build_complete.js...\n');
 
+function makeRepo(branch, metaBranch, statuses) {
+  const repo = fs.mkdtempSync(path.join(os.tmpdir(), 'dream-team-stop-'));
+  execSync(`git init -q -b ${branch}`, { cwd: repo });
+  const stateDir = path.join(repo, 'specs', '.build-state', 'demo');
+  initBuildState(stateDir, { specFile: 'specs/2026-10-16-demo.md', branch: metaBranch, mode: 'team', compactions: 0 });
+  statuses.forEach((status, i) => writeTask(stateDir, `task-${i}`, { name: `Task ${i}`, status, dependsOn: [] }));
+  return repo;
+}
+
 test('continues when no task data provided', () => {
-  const result = runHook({});
+  const empty = fs.mkdtempSync(path.join(os.tmpdir(), 'dream-team-stop-'));
+  const result = runHook({ cwd: empty });
+  fs.rmSync(empty, { recursive: true, force: true });
   assert(result.result === 'continue', `expected "continue", got "${result.result}"`);
 });
 
@@ -77,6 +91,29 @@ test('blocks when a task is still in_progress', () => {
     ]
   });
   assert(result.result === 'block', `expected "block", got "${result.result}"`);
+});
+
+test('falls back to build state for current branch and blocks', () => {
+  const repo = makeRepo('feat/demo', 'feat/demo', ['completed', 'pending']);
+  const result = runHook({ cwd: repo });
+  fs.rmSync(repo, { recursive: true, force: true });
+  assert(result.result === 'block', `expected "block", got "${result.result}"`);
+  assert(result.reason.includes('Task 1'), 'reason should list incomplete task');
+  assert(result.reason.includes('task-state.js'), 'reason should point at task-state.js');
+});
+
+test('falls back to build state and continues when all completed', () => {
+  const repo = makeRepo('feat/demo', 'feat/demo', ['completed', 'completed']);
+  const result = runHook({ cwd: repo });
+  fs.rmSync(repo, { recursive: true, force: true });
+  assert(result.result === 'continue', `expected "continue", got "${result.result}"`);
+});
+
+test('ignores build state for other branches', () => {
+  const repo = makeRepo('feat/other', 'feat/demo', ['pending']);
+  const result = runHook({ cwd: repo });
+  fs.rmSync(repo, { recursive: true, force: true });
+  assert(result.result === 'continue', `expected "continue", got "${result.result}"`);
 });
 
 console.log(`\nResults: ${passed} passed, ${failed} failed`);

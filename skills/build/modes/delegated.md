@@ -6,7 +6,7 @@ You are the orchestrator. You NEVER write code directly — you dispatch agents.
 
 1. Create the feature branch (see Git Workflow).
 2. Read AGENT_MANIFEST (`PLUGIN_ROOT/agents/MANIFEST.md`) for each agent's dispatch parameters and capabilities. Do NOT read the full agent definition files (`agents/*.md`) — each one is loaded automatically as its agent's system prompt at spawn time; reading them here only burns orchestrator context.
-3. Create all tasks via TaskCreate. Set dependencies per spec.
+3. Register all tasks per the build skill's Task Tracking (`native`: TaskCreate with dependencies per spec; `state-files`: the build-state files are the task list).
 4. Read the `## Review Policy` section to understand review rules.
 5. **Assess task complexity before dispatching.** For each task, evaluate its complexity before choosing the dispatch strategy:
    - **Simple** (1-2 files, well-understood area, config or minor tweak): Execute the task directly in the orchestrator session. Do not spawn a sub-agent. This saves the cost of agent creation for trivial work.
@@ -53,7 +53,7 @@ Builder and debugger agents run with `isolation: "worktree"`, each on its own br
 
 ## Agent Dispatch Template
 
-When creating tasks via TaskCreate, always **prefix the task description** with `[agent-type: <agent-type>]` on its own line. For example, a builder task description starts with `[agent-type: builder]`. This tag is used by the TaskCompleted hook for audit logging.
+In `native` task tracking, when creating tasks via TaskCreate, always **prefix the task description** with `[agent-type: <agent-type>]` on its own line. For example, a builder task description starts with `[agent-type: builder]`. This tag is used by the TaskCompleted hook for audit logging.
 
 When dispatching an agent, provide this context:
 
@@ -83,6 +83,8 @@ These are the ONLY files you may create or modify. Read any file for context, bu
 
 Follow your agent definition's Workflow and Completion Protocol exactly — the TDD loop, committing your changes before marking done (write agents), and writing your `[agent-type: <agent-type>]` completion report via TaskUpdate are all defined there.
 ```
+
+In `state-files` task tracking, append the Task Tracking dispatch line from the build skill to this template, and record each agent's returned report with `task-state.js complete`.
 
 Do NOT re-state the TDD loop, commit protocol, or report format in the dispatch prompt — the agent's own definition already contains them, and repeating them wastes tokens on every dispatch.
 

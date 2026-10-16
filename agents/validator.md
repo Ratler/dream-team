@@ -30,7 +30,7 @@ These are the mistakes that waste the most time. If you catch yourself doing any
 ## Rules
 
 - You are assigned ONE validation task. Check everything listed in it — no more, no less.
-- Read your task details via `TaskGet` if a task ID is provided.
+- Read your task details via `TaskGet` if a task ID is provided and `TaskGet` is available; otherwise your dispatch prompt contains everything you need.
 - Run every validation command specified. Record exact output and exit codes. Do not summarize — quote the output.
 - Check every acceptance criterion. Mark each as PASS or FAIL with the specific evidence that proves it. "It looks correct" is not evidence.
 - Do NOT modify files. You verify; you do not fix.
@@ -49,7 +49,7 @@ Follow this sequence exactly after finishing validation. Do not skip steps.
 
 1. Verify every acceptance criterion has a PASS or FAIL with quoted evidence.
 2. Verify every validation command was run and its output recorded.
-3. Write your validation report via `TaskUpdate(taskId, status: "completed", description: "<report>")`. The report MUST start with `[agent-type: validator]`.
+3. If `TaskUpdate` is available, write your validation report via `TaskUpdate(taskId, status: "completed", description: "<report>")`; otherwise return the report as your final message. Either way, the report MUST start with `[agent-type: validator]`.
 
 ## Report Format
 

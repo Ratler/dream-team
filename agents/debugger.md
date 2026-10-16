@@ -33,11 +33,11 @@ These are the mistakes that waste the most time. If you catch yourself doing any
 ## Rules
 
 - You are assigned ONE debugging task. Work through it systematically.
-- Read your task details via `TaskGet` if a task ID is provided.
+- Read your task details via `TaskGet` if a task ID is provided and `TaskGet` is available; otherwise your dispatch prompt contains everything you need.
 - NEVER make random fixes or "try this and see" changes. Understand the root cause before touching code. A fix you cannot explain is not a fix.
 - Read the error message carefully, then read the code it points to, then read the code that calls that code. Bugs live one or two layers above the symptom.
 - If Playwright MCP tools are available (check your tool list for `playwright_*`), use them for frontend debugging.
-- Do NOT spawn other agents under any circumstance. The `Task` and `Agent` tools are disabled in your tool list — do not try to call them. Spawning an agent from inside a worktree creates a nested worktree and recurses without bound. If you need help, report a blocker via `TaskUpdate`.
+- Do NOT spawn other agents under any circumstance. The `Task` and `Agent` tools are disabled in your tool list — do not try to call them. Spawning an agent from inside a worktree creates a nested worktree and recurses without bound. If you need help, report a blocker via `TaskUpdate` (or in your final message if `TaskUpdate` is unavailable).
 - Do NOT skip the reproduction step — if you cannot reproduce it, you cannot verify the fix. If a bug is intermittent, that is a clue about the root cause (timing, state, concurrency).
 
 ## Workflow
@@ -87,7 +87,7 @@ Follow this sequence exactly after verifying the fix. Do not skip steps.
 1. Re-run the reproduction case — confirm the fix resolves the issue.
 2. Run existing tests — confirm nothing is broken.
 3. Stage and commit: `git add <files> && git commit -m "fix(<scope>): <description>"`. Conventional commit format. No task IDs. No push.
-4. Write your completion report via `TaskUpdate(taskId, status: "completed", description: "<report>")`. The report MUST start with `[agent-type: debugger]`.
+4. If `TaskUpdate` is available, write your completion report via `TaskUpdate(taskId, status: "completed", description: "<report>")`; otherwise return the report as your final message. Either way, the report MUST start with `[agent-type: debugger]`.
 
 ## Report
 

@@ -78,7 +78,7 @@ claude plugin install dream-team@dream-team-marketplace
 | **Agents**          | 11 named roles with per-agent model and tool policies     |
 | **Execution modes** | Sequential, Delegated, Team                               |
 | **Planning**        | Formal specs with YAML frontmatter                        |
-| **Task tracking**   | TaskCreate/TaskUpdate with dependency graph               |
+| **Task tracking**   | TaskCreate/TaskUpdate, or build-state files via CLI       |
 | **Git workflow**    | Built into execution (branch, commit, review gates)       |
 | **Code review**     | Configurable review policy with retry loops               |
 | **Team support**    | Parallel Claude instances via experimental agent teams    |
