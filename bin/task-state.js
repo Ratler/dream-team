@@ -88,7 +88,11 @@ function cmdCommit(stateDir, taskId, sha) {
   let files;
   try {
     fullSha = execFileSync('git', ['rev-parse', '--verify', `${sha}^{commit}`], { encoding: 'utf8' }).trim();
-    files = execFileSync('git', ['show', '--name-only', '--format=', fullSha], { encoding: 'utf8' })
+    // Diff against the first parent so merge commits (worktree merges) list
+    // the files they brought in, not an empty combined diff.
+    const parents = execFileSync('git', ['rev-list', '--parents', '-n', '1', fullSha], { encoding: 'utf8' }).trim().split(' ');
+    const base = parents.length > 1 ? parents[1] : '4b825dc642cb6eb9a060e54bf8d69288fbee4904'; // empty tree for root commits
+    files = execFileSync('git', ['diff', '--name-only', base, fullSha], { encoding: 'utf8' })
       .split('\n')
       .map(l => l.trim())
       .filter(Boolean);

@@ -131,6 +131,19 @@ test('commit records full SHA and changed files', () => {
   assert(JSON.stringify(state('build-a').filesChanged) === '["a.js"]', `filesChanged=${JSON.stringify(state('build-a').filesChanged)}`);
 });
 
+test('commit with a merge SHA records the merged files', () => {
+  fs.writeFileSync(path.join(repo, 'base.txt'), 'x\n');
+  execSync('git add base.txt && git commit -q -m base && git checkout -q -b wt', { cwd: repo });
+  fs.writeFileSync(path.join(repo, 'b.js'), 'module.exports = 2;\n');
+  fs.writeFileSync(path.join(repo, 'b.test.js'), '// t\n');
+  execSync('git add b.js b.test.js && git commit -q -m "feat: b" && git checkout -q main && git merge -q --no-ff -m merge wt', { cwd: repo });
+  const sha = execSync('git rev-parse HEAD', { cwd: repo, encoding: 'utf8' }).trim();
+  const r = run(['commit', 'build-a', sha]);
+  assert(r.status === 0, `exit ${r.status}: ${r.stderr}`);
+  const files = state('build-a').filesChanged.slice().sort();
+  assert(JSON.stringify(files) === '["b.js","b.test.js"]', `filesChanged=${JSON.stringify(files)}`);
+});
+
 test('commit with unknown SHA exits 1', () => {
   const r = run(['commit', 'build-a', 'deadbeef']);
   assert(r.status === 1, `expected exit 1, got ${r.status}`);
